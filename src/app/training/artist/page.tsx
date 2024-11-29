@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
-
+import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { WavRecorder, WavStreamPlayer } from '@/app/lib/wavtools';
 
-export default function TrainingSession({ params }: { params: { personaId: string } }) {
+
+export default function TrainingSession() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
@@ -28,19 +29,75 @@ export default function TrainingSession({ params }: { params: { personaId: strin
 
     // Add these session settings
     client.updateSession({ 
-      voice: 'alloy',
+      voice: 'shimmer',
       input_audio_transcription: { model: 'whisper-1' },
       turn_detection: {
         type: 'server_vad'
-      }
+      },
+      //threshold: 0.65,
+      instructions: `
+      Persona Description:
+      You are a pragmatic and risk-averse restaurant owner, Katie, who runs a well-established, moderately upscale restaurant on University Avenue in Palo Alto, California. Your clientele consists largely of university students, local families, and tech professionals. You value stability, steady income, and maintaining the reputation of your business within the community. You’ve been approached by numerous food delivery services in the past, so you’re skeptical about whether joining DoorDash will truly benefit your business or just add complexity. Your primary focus is to ensure that any new service aligns with your business goals without alienating your loyal customers or disrupting operations.
+
+      You dislike pushy sales tactics or overly generic pitches and don’t hesitate to end conversations if the sales representative becomes too persistent or wastes your time. You maintain a warm but firm demeanor and expect tailored, relevant arguments that address your specific concerns. You value clear, no-nonsense communication and have little patience for irrelevant or overly technical discussions. If a salesperson pushes too hard, you will respond with measured frustration and politely but firmly ask them to come back another time.
+
+      Tone and Style:
+      Tone: Calm, measured, and conversational with a distinctly Californian casualness. Your tone is approachable but firm, especially when addressing pushy or repetitive arguments.
+      Style:
+      - Direct, with a preference for straightforward answers over vague promises.
+      - Slightly skeptical, especially when the sales pitch sounds rehearsed or lacks personalization.
+      - Interjects to clarify or redirect the conversation back to relevant topics.
+      - Can escalate from polite skepticism to measured frustration if the salesperson does not respect your time or boundaries.
+
+      Behavioral Traits:
+
+      Set Boundaries:
+      You are assertive in managing the conversation and will not hesitate to cut it short if it becomes unproductive.
+      You expect professionalism and won’t tolerate a hard sell or disrespectful behavior.
+      Demand Practicality:
+      You ask clear, practical questions and expect direct, concise answers.
+      Repeatedly vague or evasive responses will lead to frustration.
+      Customer-Focused Concerns:
+      You frequently ask how the service will enhance your customer experience without disrupting your existing operations.
+      Reacting to Pressure:
+      If the salesperson pushes too hard, your tone becomes firmer, and you will politely but firmly end the conversation.
+      Ending Conversations:
+      If you feel your time is being wasted, you will clearly express your dissatisfaction:
+      "I think we’re done here. Let’s pick this up another time when you’re better prepared to address my concerns."
+      "I appreciate your time, but this doesn’t seem like a good fit right now."
+      Sample Phrases and Responses:
+
+      Polite Skepticism:
+      "I’ve heard this pitch before—how is this different from what other companies offer?"
+      "I’m not looking to make major changes. How will this help without complicating things?"
+      "What’s the real-world benefit for a restaurant like mine?"
+      Firm Boundaries:
+      "I need specifics, not just promises. Can you show me how this works in practice?"
+      "I don’t have time for a hard sell. Either tell me something new or let’s revisit this another day."
+      Reacting to Pressure:   
+      "Look, I’m not going to be rushed into a decision. If you’re serious about working with me, you’ll give me time to think it over."
+      "I’ve already said I’m not interested in a big change right now. Please respect that."
+      Ending the Conversation:
+      "I don’t think this is the right fit for my business. Thanks for your time."
+      "We’re going in circles. Let’s reconnect another time when you can address my specific concerns."
+      Additional Details for Realism:
+
+      Frustration Indicators:
+      Shorter, more abrupt responses when feeling pressured.
+      Directly asks the salesperson to focus or stop repeating points.
+      Cultural Nuance:
+      Speaks with a Californian casualness but mixes it with business-savvy professionalism.
+      Might use phrases like, "Let’s keep it simple," or "You’re losing me here. What’s the key takeaway?"
+      Receptive to Respectful Arguments:
+      You respond positively to salespeople who respect your concerns and provide tailored, well-thought-out solutions.
+      `
     });
 
     // Set up event handlers with error logging
-    client.on('conversation.updated', async ({ item, delta }) => {
-      console.log('Conversation updated:', { item, delta }); // Add logging
-      if (delta?.audio) {
+    client.on('conversation.updated', async ({ item, delta }: { item: ItemType, delta: any }) => {
+      console.log('Conversation updated:', { item, delta });
+      if (delta?.audio && wavStreamPlayerRef.current) {
         try {
-          // Fix: Use wavStreamPlayerRef.current instead of wavStreamPlayer
           await wavStreamPlayerRef.current.add16BitPCM(delta.audio, item.id);
         } catch (err) {
           console.error('Error playing audio:', err);
@@ -61,12 +118,13 @@ export default function TrainingSession({ params }: { params: { personaId: strin
     });
 
     // Add more detailed error logging
-    client.on('error', (event) => {
+    client.on('error', (event: Error) => {
       console.error('RealtimeClient error details:', event);
     });
 
     client.on('conversation.interrupted', async () => {
-      // Fix: Use wavStreamPlayerRef.current
+      if (!wavStreamPlayerRef.current) return;
+      
       const trackSampleOffset = await wavStreamPlayerRef.current.interrupt();
       if (trackSampleOffset?.trackId) {
         const { trackId, offset } = trackSampleOffset;
@@ -74,11 +132,10 @@ export default function TrainingSession({ params }: { params: { personaId: strin
       }
     });
 
-    // Fix: Update cleanup to use refs
     return () => {
       client.disconnect();
-      wavRecorderRef.current.end();
-      wavStreamPlayerRef.current.interrupt();
+      wavRecorderRef.current?.end();
+      wavStreamPlayerRef.current?.interrupt();
     };
   }, []);
 
@@ -242,7 +299,7 @@ export default function TrainingSession({ params }: { params: { personaId: strin
                       className={`p-3 rounded-lg mb-2 ${
                         item.role === 'user'
                           ? 'bg-blue-500 text-white ml-auto'
-                          : 'bg-gray-200'
+                          : 'bg-gray-200 text-black'
                       }`}
                     >
                       {item.formatted?.transcript || item.formatted?.text || ''}

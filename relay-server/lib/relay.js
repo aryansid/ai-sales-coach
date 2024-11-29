@@ -33,13 +33,13 @@ export class RealtimeRelay {
     // Instantiate new client
     this.log(`Connecting with key "${this.apiKey.slice(0, 3)}..."`);
     const client = new RealtimeClient({ apiKey: this.apiKey });
-    client.updateSession({ voice: 'alloy' });
-    client.updateSession({ 
-      turn_detection: {
-        type: 'server_vad'
-      },
-      threshold: 0.5,
-    });
+    //client.updateSession({ voice: 'alloy' });
+    //client.updateSession({ 
+    // turn_detection: {
+    //    type: 'server_vad'
+    //  },
+    //  threshold: 0.5,
+    //});
     // Relay: OpenAI Realtime API Event -> Browser Event
     client.realtime.on('server.*', (event) => {
       if (event.type === 'response.done' && event.response.status === 'failed') {
