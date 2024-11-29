@@ -1,89 +1,199 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
-import { ReactMic } from 'react-mic';
+
+import { RealtimeClient } from '@openai/realtime-api-beta';
+import { WavRecorder, WavStreamPlayer } from '@/app/lib/wavtools';
 
 export default function TrainingSession({ params }: { params: { personaId: string } }) {
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioSource, setAudioSource] = useState<string | null>(null);
-  const [messages, setMessages] = useState<{ id: string; role: string; content: string }[]>([]);
+  const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const clientRef = useRef<RealtimeClient>();
+  const wavRecorderRef = useRef<WavRecorder>();
+  const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
-  const connectWebSocket = () => {
-    if (wsRef.current) return;
-
-    wsRef.current = new WebSocket('ws://localhost:3000/api/realtime');
-
-    wsRef.current.onopen = () => {
-      console.log('WebSocket connected');
-      wsRef.current?.send(JSON.stringify({ type: 'session.start', persona: params.personaId }));
-    };
-
-    wsRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('Received WebSocket message:', data);
-
-      if (data.type === 'response.text') {
-        setMessages((prev) => [
-          ...prev,
-          { id: data.id, role: 'assistant', content: data.content },
-        ]);
-      } else if (data.type === 'response.audio') {
-        setAudioSource(`data:audio/wav;base64,${data.audio}`);
-      }
-    };
-
-    wsRef.current.onclose = () => {
-      console.log('WebSocket closed');
-      wsRef.current = null;
-    };
-
-    wsRef.current.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-  };
-
-  const toggleCall = () => {
-    setIsCallActive(!isCallActive);
-    setIsRecording(!isCallActive); // Start/stop recording based on call state
-    if (!isCallActive) {
-      connectWebSocket();
-    } else if (wsRef.current) {
-      wsRef.current.close();
-    }
-  };
-
-  const handleAudioStop = async (recordedBlob: Blob) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64Audio = reader.result?.toString().split(',')[1];
-        if (base64Audio) {
-          wsRef.current?.send(
-            JSON.stringify({
-              type: 'input.audio',
-              audio: base64Audio,
-            })
-          );
-        }
-      };
-      reader.readAsDataURL(recordedBlob);
-    } else {
-      console.error('WebSocket is not connected');
-    }
-  };
+  const relayServerUrl = 'ws://localhost:8081'; // Adjust as necessary
 
   useEffect(() => {
-    if (audioSource && audioRef.current) {
-      audioRef.current.play();
+    // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
+    clientRef.current = new RealtimeClient({ url: relayServerUrl });
+    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
+    wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
+
+    const client = clientRef.current;
+
+    // Add these session settings
+    client.updateSession({ 
+      voice: 'alloy',
+      input_audio_transcription: { model: 'whisper-1' },
+      turn_detection: {
+        type: 'server_vad'
+      }
+    });
+
+    // Set up event handlers with error logging
+    client.on('conversation.updated', async ({ item, delta }) => {
+      console.log('Conversation updated:', { item, delta }); // Add logging
+      if (delta?.audio) {
+        try {
+          // Fix: Use wavStreamPlayerRef.current instead of wavStreamPlayer
+          await wavStreamPlayerRef.current.add16BitPCM(delta.audio, item.id);
+        } catch (err) {
+          console.error('Error playing audio:', err);
+        }
+      }
+
+      // Update conversation items
+      setConversationItems((prevItems) => {
+        const existingItemIndex = prevItems.findIndex((i) => i.id === item.id);
+        if (existingItemIndex !== -1) {
+          const updatedItems = [...prevItems];
+          updatedItems[existingItemIndex] = item;
+          return updatedItems;
+        } else {
+          return [...prevItems, item];
+        }
+      });
+    });
+
+    // Add more detailed error logging
+    client.on('error', (event) => {
+      console.error('RealtimeClient error details:', event);
+    });
+
+    client.on('conversation.interrupted', async () => {
+      // Fix: Use wavStreamPlayerRef.current
+      const trackSampleOffset = await wavStreamPlayerRef.current.interrupt();
+      if (trackSampleOffset?.trackId) {
+        const { trackId, offset } = trackSampleOffset;
+        await client.cancelResponse(trackId, offset);
+      }
+    });
+
+    // Fix: Update cleanup to use refs
+    return () => {
+      client.disconnect();
+      wavRecorderRef.current.end();
+      wavStreamPlayerRef.current.interrupt();
+    };
+  }, []);
+
+  const toggleCall = async () => {
+    if (!isCallActive) {
+      try {
+        // Start the call
+        const client = clientRef.current;
+        const wavRecorder = wavRecorderRef.current;
+        const wavStreamPlayer = wavStreamPlayerRef.current;
+
+        if (!client || !wavRecorder || !wavStreamPlayer) {
+          throw new Error("Required resources not initialized");
+        }
+
+        // Connect to the relay server
+        if (!client.isConnected()) {
+          await client.connect();
+        }
+
+        // Start recording audio from the microphone with error handling
+        try {
+          await wavRecorder.begin();
+          if (!isMuted && client.getTurnDetectionType() === 'server_vad') {
+            await wavRecorder.record((data) => {
+              client.appendInputAudio(data.mono);
+            });
+          }
+        } catch (err) {
+          console.error('Error starting audio recording:', err);
+          return;
+        }
+
+        // Start the audio output with error handling
+        try {
+          await wavStreamPlayer.connect();
+        } catch (err) {
+          console.error('Error connecting audio output:', err);
+          return;
+        }
+
+        // Only set call as active if everything succeeded
+        setIsCallActive(true);
+
+      } catch (err) {
+        console.error('Error starting call:', err);
+      }
+    } else {
+      try {
+        const client = clientRef.current;
+        const wavRecorder = wavRecorderRef.current;
+        const wavStreamPlayer = wavStreamPlayerRef.current;
+
+        if (!client || !wavRecorder || !wavStreamPlayer) {
+          throw new Error("Required resources not initialized");
+        }
+
+        // Only try to pause/end if we have an active processor
+        try {
+          if (!isMuted) {
+            await wavRecorder.pause();
+          }
+          // Only call end() if we have an active session
+          if (wavRecorder.processor) {
+            await wavRecorder.end();
+          }
+        } catch (err) {
+          console.error('Error stopping recorder:', err);
+        }
+
+        try {
+          await wavStreamPlayer.interrupt();
+        } catch (err) {
+          console.error('Error stopping player:', err);
+        }
+
+        try {
+          if (client.isConnected()) {
+            client.disconnect();
+          }
+        } catch (err) {
+          console.error('Error disconnecting client:', err);
+        }
+
+        // Set call as inactive after cleanup attempts
+        setIsCallActive(false);
+        
+      } catch (err) {
+        console.error('Error ending call:', err);
+      }
     }
-  }, [audioSource]);
+  };
+
+  const toggleMute = async () => {
+    try {
+      const wavRecorder = wavRecorderRef.current;
+      if (!wavRecorder) return;
+
+      if (isMuted) {
+        // Unmuting
+        await wavRecorder.record((data) => {
+          clientRef.current?.appendInputAudio(data.mono);
+        });
+        setIsMuted(false);
+      } else {
+        // Muting
+        await wavRecorder.pause();
+        setIsMuted(true);
+      }
+    } catch (err) {
+      console.error('Error toggling mute:', err);
+      // Revert the mute state if there was an error
+      setIsMuted((prev) => !prev);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 p-8">
@@ -94,12 +204,12 @@ export default function TrainingSession({ params }: { params: { personaId: strin
       >
         <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold">Voice Training Session</h1>
+            <h1 className="text-2xl font-semibold">Training Call</h1>
             <div className="flex gap-4">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={toggleMute}
                 className="p-3 rounded-full bg-gray-100 hover:bg-gray-200"
               >
                 {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
@@ -126,34 +236,19 @@ export default function TrainingSession({ params }: { params: { personaId: strin
                 className="space-y-4"
               >
                 <div className="h-96 overflow-y-auto p-4 bg-gray-50 rounded-lg">
-                  {messages.map((message) => (
+                  {conversationItems.map((item) => (
                     <div
-                      key={message.id}
+                      key={item.id}
                       className={`p-3 rounded-lg mb-2 ${
-                        message.role === 'user'
+                        item.role === 'user'
                           ? 'bg-blue-500 text-white ml-auto'
                           : 'bg-gray-200'
                       }`}
                     >
-                      {message.content}
+                      {item.formatted?.transcript || item.formatted?.text || ''}
                     </div>
                   ))}
                 </div>
-
-                <ReactMic
-                  record={isRecording}
-                  onStop={handleAudioStop}
-                  className="hidden"
-                  strokeColor="#000000"
-                  backgroundColor="#ffffff"
-                />
-                <p className="text-sm text-gray-500">
-                  {isRecording ? 'Recording...' : 'Call not active.'}
-                </p>
-
-                {audioSource && (
-                  <audio ref={audioRef} src={audioSource} controls className="mt-4"></audio>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
