@@ -1,16 +1,21 @@
 // EvaluationScreen.tsx
+import { ItemType } from '@openai/realtime-api-beta/dist/lib/client';
 import { motion } from 'framer-motion';
-import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft, LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 
-const ScoreCard = ({ icon: Icon, category, score, description }) => {
+const ScoreCard = ({ icon: Icon, category, score, description }: {
+  icon: LucideIcon;
+  category: string;
+  score: number;
+  description: string;
+}) => {
   // Calculate gradient color based on score
-  const getScoreColor = (score) => {
+  const getScoreColor = (score: number) => {
     if (score >= 90) return 'from-emerald-500/20 to-emerald-500/5';
     if (score >= 75) return 'from-violet-500/20 to-violet-500/5';
     return 'from-amber-500/20 to-amber-500/5';
   };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -44,7 +49,10 @@ const ScoreCard = ({ icon: Icon, category, score, description }) => {
   );
 };
 
-const FeedbackItem = ({ message, suggestion }) => (
+const FeedbackItem = ({ message, suggestion }: {
+  message: string;
+  suggestion: string;
+}) => (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -70,7 +78,9 @@ const FeedbackItem = ({ message, suggestion }) => (
     </motion.div>
 );
 
-export const EvaluationScreen = ({ conversationItems }) => {
+export const EvaluationScreen = ({ conversationItems }: {
+  conversationItems: ItemType[];
+}) => {
   // Dummy scoring data
   const scores = [
     {

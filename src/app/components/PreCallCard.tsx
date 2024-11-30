@@ -1,7 +1,16 @@
 import { motion } from 'framer-motion';
 import { Phone } from 'lucide-react';
 
-export const PreCallCard = ({ persona, onStartCall }) => {
+interface PreCallCardProps {
+  persona: {
+    name: string;
+    description: string;
+    traits: string[];
+  };
+  onStartCall: () => void;
+}
+
+export const PreCallCard = ({ persona, onStartCall }: PreCallCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

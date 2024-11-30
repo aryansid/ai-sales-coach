@@ -9,7 +9,11 @@ import LoadingOverlay from './components/LoadingOverlay';
 import { useRouter } from 'next/navigation';
 
 // WaveformBars component remains unchanged
-const WaveformBars = ({ isActive, color, numBars = 12 }) => {
+const WaveformBars = ({ isActive, color, numBars = 12 }: {
+  isActive: boolean;
+  color: string;
+  numBars?: number;
+}) => {
   const baseHeights = [60, 40, 80, 30, 70, 40, 90, 50, 75, 35, 65, 45];
   
   return (
@@ -89,12 +93,12 @@ const personas = [
 ];
 
 export default function Home() {
-  const [hoveredCard, setHoveredCard] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleCardClick = (personaId) => {
+  const handleCardClick = (personaId: string) => {
     setIsLoading(true);
     router.push(`/training/${personaId}`);
   };

@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
+import { ItemType } from '@openai/realtime-api-beta/dist/lib/client';
 
 export const ChatInterface = ({ 
   conversationItems,
@@ -8,9 +9,15 @@ export const ChatInterface = ({
   isMuted,
   onToggleCall,
   onToggleMute
+}: {
+  conversationItems: ItemType[];
+  isCallActive: boolean;
+  isMuted: boolean;
+  onToggleCall: () => void;
+  onToggleMute: () => void;
 }) => {
   const messagesEndRef = useRef(null);
-  const messagesContainerRef = useRef(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
