@@ -1,17 +1,51 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { WavRecorder, WavStreamPlayer } from '@/app/lib/wavtools';
+import { PreCallCard } from '@/app/components/PreCallCard';
+import { ChatInterface } from '@/app/components/ChatInterface';
+import { EvaluationScreen } from '@/app/components/EvaluationScreen';
 
+// Dynamic import for the visualization
+const Scene = dynamic(() => import('@/app/components/Scene'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="animate-pulse text-violet-400">Loading...</div>
+    </div>
+  )
+});
+
+// Persona configuration
+const artistPersona = {
+  name: "Katie",
+  description: "A pragmatic restaurant owner in Palo Alto with 12 years of experience. She values quality, community trust, and careful business decisions.",
+  traits: [
+    "Risk-averse with focus on stability",
+    "Customer-first mindset",
+    "Values quality and reliability",
+    "Direct and no-nonsense communication"
+  ],
+  accent: '#8B5CF6',
+  colorId: 0
+};
 
 export default function TrainingSession() {
+  // Add new state variables
+  const [isPreCall, setIsPreCall] = useState(true);
+  const [isAIResponding, setIsAIResponding] = useState(false);
+  const [sessionActive, setSessionActive] = useState(false);
+  
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
+  const [showEvaluation, setShowEvaluation] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
@@ -77,7 +111,7 @@ export default function TrainingSession() {
       Reacting to Pressure:   
       "Look, I’m not going to be rushed into a decision. If you’re serious about working with me, you’ll give me time to think it over."
       "I’ve already said I’m not interested in a big change right now. Please respect that."
-Ending the Conversation:
+      Ending the Conversation:
       "I don’t think this is the right fit for my business. Thanks for your time."
       "We’re going in circles. Let’s reconnect another time when you can address my specific concerns."
       Additional Details for Realism:
@@ -115,6 +149,16 @@ Ending the Conversation:
           return [...prevItems, item];
         }
       });
+
+      // Modified AI responding logic
+      if (item.role === 'assistant') {
+        if (delta?.audio) {
+          setIsAIResponding(true);
+        } else if (!delta?.audio && item.content?.complete) {
+          // Only set to false when the response is actually complete
+          setIsAIResponding(false);
+        }
+      }
     });
 
     // Add more detailed error logging
@@ -220,7 +264,8 @@ Ending the Conversation:
           console.error('Error disconnecting client:', err);
         }
 
-        // Set call as inactive after cleanup attempts
+        // After successful cleanup, show evaluation and set call inactive
+        setShowEvaluation(true);
         setIsCallActive(false);
         
       } catch (err) {
@@ -252,65 +297,127 @@ Ending the Conversation:
     }
   };
 
-  return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="max-w-4xl mx-auto"
-      >
-        <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold">Training Call</h1>
-            <div className="flex gap-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleMute}
-                className="p-3 rounded-full bg-gray-100 hover:bg-gray-200"
-              >
-                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleCall}
-                className={`p-3 rounded-full ${
-                  isCallActive ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
-                }`}
-              >
-                {isCallActive ? <PhoneOff className="w-6 h-6" /> : <Phone className="w-6 h-6" />}
-              </motion.button>
-            </div>
-          </div>
+  // Add new startCall handler
+  const startCall = async () => {
+    setIsPreCall(false);
+    const client = clientRef.current;
+    const wavRecorder = wavRecorderRef.current;
+    const wavStreamPlayer = wavStreamPlayerRef.current;
 
-          <AnimatePresence>
-            {isCallActive && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-4"
-              >
-                <div className="h-96 overflow-y-auto p-4 bg-gray-50 rounded-lg">
-                  {conversationItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`p-3 rounded-lg mb-2 ${
-                        item.role === 'user'
-                          ? 'bg-blue-500 text-white ml-auto'
-                          : 'bg-gray-200 text-black'
-                      }`}
-                    >
-                      {item.formatted?.transcript || item.formatted?.text || ''}
+    if (!client || !wavRecorder || !wavStreamPlayer) {
+      console.error("Required resources not initialized");
+      return;
+    }
+
+    try {
+      await client.connect();
+      await wavStreamPlayer.connect();
+      await wavRecorder.begin();
+      
+      setSessionActive(true);
+      setIsCallActive(true);
+
+      if (!isMuted) {
+        await wavRecorder.record((data) => {
+          if (client.isConnected()) {
+            client.appendInputAudio(data.mono);
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Error starting call:', err);
+      if (wavRecorder && sessionActive) {
+        await wavRecorder.end();
+        setSessionActive(false);
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen font-sans relative bg-white overflow-hidden">
+      {/* Background gradients */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />
+        <div className="absolute inset-0">
+          <div className="absolute top-0 -right-1/4 w-1/2 h-1/2 bg-gradient-to-br from-violet-100/20 via-blue-100/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-tr from-amber-100/20 via-purple-100/10 to-transparent rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative p-4 h-screen">
+        <AnimatePresence mode="wait">
+          {showEvaluation ? (
+            <motion.div
+              key="evaluation"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-full"
+            >
+              <EvaluationScreen conversationItems={conversationItems} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="h-full"
+            >
+              <div className="relative h-full overflow-hidden flex flex-col lg:flex-row max-w-7xl mx-auto">
+                {/* Left side */}
+                <div className="h-full min-h-0 w-full lg:w-[45%] p-6 md:p-12 lg:p-16 flex flex-col">
+                  {/* Header */}
+                  <div className="flex-none mb-8">
+                    <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to personas
+                    </Link>
+                    <div className="flex items-center gap-4">
+                      <div className="w-3 h-3 rounded-full bg-violet-400" />
+                      <h1 className="font-serif text-3xl md:text-4xl text-zinc-900">
+                        Training Session
+                      </h1>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Chat or PreCall */}
+                  <div className="flex-1 min-h-0 overflow-auto">
+                    <AnimatePresence mode="wait">
+                      {isPreCall ? (
+                        <PreCallCard 
+                          key="pre-call"
+                          persona={artistPersona} 
+                          onStartCall={startCall} 
+                        />
+                      ) : (
+                        <ChatInterface
+                          key="chat"
+                          conversationItems={conversationItems}
+                          isCallActive={isCallActive}
+                          isMuted={isMuted}
+                          onToggleCall={toggleCall}
+                          onToggleMute={toggleMute}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
-    </main>
+
+                {/* Right side - Visualization */}
+                <div className="h-full w-full lg:w-[55%] relative flex items-center justify-center">
+                  <div className="p-8 md:p-12 lg:p-16">
+                    <div className="w-[300px] h-[300px] md:w-[400px] md:h-[400px] lg:w-[500px] lg:h-[500px] relative">
+                      <Scene 
+                        isActive={!isMuted && (isCallActive && isAIResponding)}
+                        color={artistPersona.colorId}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }

@@ -15,35 +15,42 @@ const Blob = ({ isActive, color }) => {
   const hover = useRef(false);
   const rafId = useRef(null);
   const timeRef = useRef(0);
+  const animationRef = useRef({ time: 0 });
   
-  const uniforms = useMemo(() => {
-    return {
-      u_time: { value: 0 },
-      u_intensity: { value: 0.3 },
-    };
-  }, []);
+  // Separate animation uniforms that don't need to update with color
+  const baseUniforms = useMemo(() => ({
+    u_time: { value: 0 },
+    u_intensity: { value: 0.3 },
+    u_colorId: { value: color },
+  }), []);
 
-  // Separate time-based animation
+  useEffect(() => {
+    if (mesh.current) {
+      mesh.current.material.uniforms.u_colorId.value = color;
+    }
+  }, [color]);
+  // Set up animation loop that persists regardless of uniform changes
   useEffect(() => {
     let startTime = Date.now();
     
     const animate = () => {
       if (mesh.current) {
         const currentTime = Date.now();
-        const elapsed = (currentTime - startTime) * 0.001; // Convert to seconds
+        const elapsed = (currentTime - startTime) * 0.001;
+        animationRef.current.time = elapsed;
         mesh.current.material.uniforms.u_time.value = 0.4 * elapsed;
       }
-      rafId.current = requestAnimationFrame(animate);
+      rafId.current = window.requestAnimationFrame(animate);
     };
 
     animate();
 
     return () => {
       if (rafId.current) {
-        cancelAnimationFrame(rafId.current);
+        window.cancelAnimationFrame(rafId.current);
       }
     };
-  }, []);
+  }, []); // Empty dependency array to run only once
 
   // Handle intensity changes in useFrame
   useFrame(() => {
@@ -68,7 +75,8 @@ const Blob = ({ isActive, color }) => {
       <shaderMaterial
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
-        uniforms={uniforms}
+        uniforms={baseUniforms}
+        key={color} // Add key to force shader update when color changes
       />
     </mesh>
   );
