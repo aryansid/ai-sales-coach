@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -11,10 +11,9 @@ import { WavRecorder, WavStreamPlayer } from '@/app/lib/wavtools';
 import { PreCallCard } from '@/app/components/PreCallCard';
 import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
-import { ErrorPopup } from '@/app/components/ErrorPopup';
 
 // Dynamic import for the visualization
-const Scene = dynamic(() => import('../../components/Scene'), {
+const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center">
@@ -55,26 +54,27 @@ interface Analysis {
 }
 
 const RELAY_SERVER_URL = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8081';
-
 export default function TrainingSession() {
   // Add new state variables
   const [isPreCall, setIsPreCall] = useState(true);
   const [isAIResponding, setIsAIResponding] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
-  
+
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showError, setShowError] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
   const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
+  const relayServerUrl = process.env.RELAY_SERVER_URL; // Adjust as necessary
   useEffect(() => {
+    // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
+    clientRef.current = new RealtimeClient({ url: relayServerUrl });
     // Initialize RealtimeClient with API key
     clientRef.current = new RealtimeClient({ 
       url: RELAY_SERVER_URL
@@ -115,20 +115,12 @@ export default function TrainingSession() {
         }
       }
 
-      // Update conversation items - Modified to handle interruptions
+      // Update conversation items
       setConversationItems((prevItems) => {
         const existingItemIndex = prevItems.findIndex((i) => i.id === item.id);
         if (existingItemIndex !== -1) {
-          // Preserve existing text if new item doesn't have formatted text
-          const updatedItem = {
-            ...item,
-            formatted: {
-              ...item.formatted,
-              text: item.formatted?.text || prevItems[existingItemIndex].formatted?.text
-            }
-          };
           const updatedItems = [...prevItems];
-          updatedItems[existingItemIndex] = updatedItem;
+          updatedItems[existingItemIndex] = item;
           return updatedItems;
         } else {
           return [...prevItems, item];
@@ -139,7 +131,8 @@ export default function TrainingSession() {
       if (item.role === 'assistant') {
         if (delta?.audio) {
           setIsAIResponding(true);
-        } else if (!delta?.audio && item.formatted?.text) {
+        } else if (!delta?.audio && item.formatted?.text) { // Check for ERROR
+          // Only set to false when the response is actually complete
           setIsAIResponding(false);
         }
       }
@@ -148,12 +141,11 @@ export default function TrainingSession() {
     // Add more detailed error logging
     client.on('error', (event: Error) => {
       console.error('RealtimeClient error details:', event);
-      setShowError(true);
     });
 
     client.on('conversation.interrupted', async () => {
       if (!wavStreamPlayerRef.current) return;
-      
+
       const trackSampleOffset = await wavStreamPlayerRef.current.interrupt();
       if (trackSampleOffset?.trackId) {
         const { trackId, offset } = trackSampleOffset;
@@ -217,9 +209,12 @@ export default function TrainingSession() {
         // Build the transcript
         console.log('=== Call Transcript ===');
         let fullTranscript = '';
-        
+
         conversationItems.forEach((item) => {
-          const transcript = item.formatted?.text || '';
+          const contentWithTranscript = item.content?.find(c => 
+            c.type === 'input_audio' || c.type === 'audio'
+          );
+          const transcript = contentWithTranscript?.transcript || '';
           console.log(`${item.role}: ${transcript}`);
           fullTranscript += `${item.role}: ${transcript}\n`;
         });
@@ -248,39 +243,39 @@ export default function TrainingSession() {
           console.log(analysisData);
           console.log('===========================');
 
-          // Replace this simple cleanup with more robust error handling
+          // Cleanup after analysis is complete
           const client = clientRef.current;
           const wavRecorder = wavRecorderRef.current;
           const wavStreamPlayer = wavStreamPlayerRef.current;
 
-          // Handle recorder cleanup
+          // Only try to pause/end if we have an active processor
           try {
             if (!isMuted) {
-              await wavRecorder?.pause();
+              await wavRecorder.pause();
             }
-            if (wavRecorder?.processor) {
+            // Only call end() if we have an active session
+            if (wavRecorder.processor) {
               await wavRecorder.end();
             }
           } catch (err) {
             console.error('Error stopping recorder:', err);
           }
 
-          // Handle player cleanup
           try {
-            await wavStreamPlayer?.interrupt();
+            await wavStreamPlayer.interrupt();
           } catch (err) {
             console.error('Error stopping player:', err);
           }
 
-          // Handle client cleanup
           try {
-            if (client?.isConnected()) {
+            if (client.isConnected()) {
               client.disconnect();
             }
           } catch (err) {
             console.error('Error disconnecting client:', err);
           }
 
+          // Set analyzing to false and show evaluation
           setIsAnalyzing(false);
           setIsCallActive(false);
           setShowEvaluation(true);
@@ -289,6 +284,7 @@ export default function TrainingSession() {
           console.error('Error getting analysis:', error);
           setIsAnalyzing(false);
         }
+
       } catch (err) {
         console.error('Error ending call:', err);
         setIsAnalyzing(false);
@@ -314,7 +310,7 @@ export default function TrainingSession() {
       }
     } catch (err) {
       console.error('Error toggling mute:', err);
-      setShowError(true);
+      // Revert the mute state if there was an error
       setIsMuted((prev) => !prev);
     }
   };
@@ -328,7 +324,6 @@ export default function TrainingSession() {
 
     if (!client || !wavRecorder || !wavStreamPlayer) {
       console.error("Required resources not initialized");
-      setShowError(true);
       return;
     }
 
@@ -336,7 +331,7 @@ export default function TrainingSession() {
       await client.connect();
       await wavStreamPlayer.connect();
       await wavRecorder.begin();
-      
+
       setSessionActive(true);
       setIsCallActive(true);
 
@@ -349,7 +344,6 @@ export default function TrainingSession() {
       }
     } catch (err) {
       console.error('Error starting call:', err);
-      setShowError(true);
       if (wavRecorder && sessionActive) {
         await wavRecorder.end();
         setSessionActive(false);
@@ -378,10 +372,6 @@ export default function TrainingSession() {
 
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
-      <ErrorPopup 
-        isVisible={showError} 
-        onClose={() => setShowError(false)} 
-      />
       {/* Background gradients */}
       <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />
         <div className="absolute inset-0">
@@ -468,4 +458,3 @@ export default function TrainingSession() {
       </div>
     </div>
   );
-}

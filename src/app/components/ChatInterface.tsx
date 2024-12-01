@@ -34,6 +34,24 @@ export const ChatInterface = ({
     onToggleCall();
   };
 
+  const getMessageContent = (item: ItemType) => {
+    const content = 
+      item.formatted?.transcript ||
+      item.formatted?.text ||
+      item.text ||
+      (item.content?.find(c =>
+        c.type === 'input_audio' ||
+        c.type === 'audio'
+      )?.transcript) ||
+      '';
+
+    if (item.role === 'assistant' && item.status === 'interrupted') {
+      return content || '[Message interrupted]';
+    }
+
+    return content || (item.role === 'user' ? '[inaudible]' : '');
+  };
+
   return (
     <div className="h-full w-full relative">
       {/* Chat Container with Fade Effects */}
@@ -48,7 +66,9 @@ export const ChatInterface = ({
         >
           <div className="py-6 space-y-4">
             {conversationItems.map((item) => {
-              const content = item.formatted?.transcript || item.formatted?.text;
+              const content = getMessageContent(item);
+              const isInterrupted = item.status === 'interrupted';
+              
               return (
                 <motion.div
                   key={item.id}
@@ -63,7 +83,8 @@ export const ChatInterface = ({
                       p-4 rounded-2xl backdrop-blur-md shadow-lg
                       ${item.role === 'user' 
                         ? 'bg-zinc-900/10 border border-zinc-800/10' 
-                        : 'bg-violet-500/10 border border-violet-500/10'
+                        : `bg-violet-500/10 border border-violet-500/10 
+                           ${isInterrupted ? 'opacity-75' : ''}`
                       }
                     `}
                   >
@@ -73,10 +94,12 @@ export const ChatInterface = ({
                         : 'text-violet-900'
                       }
                     `}>
-                      {item.role === 'user' 
-                        ? (content || <em>[inaudible]</em>)
-                        : content
-                      }
+                      {content}
+                      {isInterrupted && (
+                        <span className="ml-2 text-xs text-violet-400">
+                          (interrupted)
+                        </span>
+                      )}
                     </div>
                   </div>
                 </motion.div>

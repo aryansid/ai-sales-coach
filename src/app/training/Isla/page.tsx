@@ -13,27 +13,8 @@ import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
 import { ErrorPopup } from '@/app/components/ErrorPopup';
 
-
-// Type definitions
-interface Score {
-  category: string;
-  score: number;
-  description: string;
-}
-
-interface Insight {
-  message: string;
-  suggestion: string;
-}
-
-interface Analysis {
-  scores: Score[];
-  insights: Insight[];
-}
-
-
 // Dynamic import for the visualization
-const Scene = dynamic(() => import('../../components/Scene'), {
+const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center">
@@ -213,7 +194,10 @@ export default function TrainingSession() {
         let fullTranscript = '';
         
         conversationItems.forEach((item) => {
-          const transcript = item.formatted?.text || '';
+          const contentWithTranscript = item.content?.find(c => 
+            c.type === 'input_audio' || c.type === 'audio'
+          );
+          const transcript = contentWithTranscript?.transcript || '';
           console.log(`${item.role}: ${transcript}`);
           fullTranscript += `${item.role}: ${transcript}\n`;
         });

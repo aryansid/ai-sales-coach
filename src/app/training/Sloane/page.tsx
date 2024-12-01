@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -13,26 +13,8 @@ import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
 import { ErrorPopup } from '@/app/components/ErrorPopup';
 
-// Type definitions
-interface Score {
-  category: string;
-  score: number;
-  description: string;
-}
-
-interface Insight {
-  message: string;
-  suggestion: string;
-}
-
-interface Analysis {
-  scores: Score[];
-  insights: Insight[];
-}
-
-
 // Dynamic import for the visualization
-const Scene = dynamic(() => import('../../components/Scene'), {
+const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center">
@@ -49,10 +31,9 @@ const artistPersona = {
     "Deeply cautious about changes to operations or tradition",
     "Prefers familiar solutions and the path of least resistance",
     "Skeptical of the unknown and values customer-first approaches",
-    "Does not like aggressive sales tactics"
   ],
   accent: '#8B5CF6',
-  colorId: 2
+  colorId: 3
 };
 
 // Add this constant at the top level (after imports)
@@ -115,35 +96,25 @@ export default function TrainingSession() {
         }
       }
 
-      // Update conversation items with preservation of text on interruption
+      // Update conversation items
       setConversationItems((prevItems) => {
         const existingItemIndex = prevItems.findIndex((i) => i.id === item.id);
         if (existingItemIndex !== -1) {
-          // Keep existing text if the new update doesn't include text
-          const updatedItem = {
-            ...item,
-            formatted: {
-              ...item.formatted,
-              text: item.formatted?.text || prevItems[existingItemIndex].formatted?.text
-            }
-          };
           const updatedItems = [...prevItems];
-          updatedItems[existingItemIndex] = updatedItem;
+          updatedItems[existingItemIndex] = item;
           return updatedItems;
         } else {
           return [...prevItems, item];
         }
       });
 
-      // AI responding state management
+      // Modified AI responding logic
       if (item.role === 'assistant') {
         if (delta?.audio) {
           setIsAIResponding(true);
-        } else if (!delta?.audio) {
-          // Only set to false when we have a complete message
-          if (item.formatted?.text) {
-            setIsAIResponding(false);
-          }
+        } else if (!delta?.audio && item.formatted?.text) { // Check for ERROR
+          // Only set to false when the response is actually complete
+          setIsAIResponding(false);
         }
       }
     });
@@ -222,7 +193,10 @@ export default function TrainingSession() {
         let fullTranscript = '';
         
         conversationItems.forEach((item) => {
-          const transcript = item.formatted?.text || '';
+          const contentWithTranscript = item.content?.find(c => 
+            c.type === 'input_audio' || c.type === 'audio'
+          );
+          const transcript = contentWithTranscript?.transcript || '';
           console.log(`${item.role}: ${transcript}`);
           fullTranscript += `${item.role}: ${transcript}\n`;
         });
