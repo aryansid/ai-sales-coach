@@ -14,7 +14,7 @@ import { EvaluationScreen } from '@/app/components/EvaluationScreen';
 import { ErrorPopup } from '@/app/components/ErrorPopup';
 
 // Dynamic import for the visualization
-const Scene = dynamic(() => import('@/app/components/Scene'), {
+const Scene = dynamic(() => import('../../components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center">

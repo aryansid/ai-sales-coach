@@ -46,7 +46,7 @@ const WaveformBars = ({ isActive, color, numBars = 12 }: {
   );
 };
 
-const Scene = dynamic(() => import('@/app/components/Scene'), {
+const Scene = dynamic(() => import('./components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center overflow-visible">
