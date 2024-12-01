@@ -51,11 +51,11 @@ export default function TrainingSession() {
   const wavRecorderRef = useRef<WavRecorder>();
   const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
-  const relayServerUrl = process.env.RELAY_SERVER_URL; // Adjust as necessary
+  const RELAY_SERVER_URL = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8081';
 
   useEffect(() => {
     // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
-    clientRef.current = new RealtimeClient({ url: relayServerUrl });
+    clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
     wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
 

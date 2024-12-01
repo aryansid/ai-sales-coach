@@ -3,6 +3,7 @@ import { ItemType } from '@openai/realtime-api-beta/dist/lib/client';
 import { motion } from 'framer-motion';
 import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // Type definitions
 interface Score {
@@ -102,7 +103,13 @@ const FeedbackItem = ({ message, suggestion }: {
     </motion.div>
 );
 
-export const EvaluationScreen = ({ analysis }) => {
+export const EvaluationScreen = ({ analysis }: { analysis: Analysis }) => {
+  const router = useRouter();
+  
+  if (!analysis) {
+    router.push('/');
+    return null;
+  }
   // Map the scores with their corresponding icons
   const scoresWithIcons = analysis.scores.map(score => ({
     ...score,
