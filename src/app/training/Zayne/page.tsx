@@ -53,6 +53,8 @@ interface Analysis {
   insights: Insight[];
 }
 
+const RELAY_SERVER_URL = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8081';
+
 export default function TrainingSession() {
   // Add new state variables
   const [isPreCall, setIsPreCall] = useState(true);
@@ -70,11 +72,11 @@ export default function TrainingSession() {
   const wavRecorderRef = useRef<WavRecorder>();
   const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
-  const relayServerUrl = process.env.RELAY_SERVER_URL; // Adjust as necessary
-
   useEffect(() => {
-    // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
-    clientRef.current = new RealtimeClient({ url: relayServerUrl });
+    // Initialize RealtimeClient with API key
+    clientRef.current = new RealtimeClient({ 
+      url: RELAY_SERVER_URL
+    });
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
     wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
 

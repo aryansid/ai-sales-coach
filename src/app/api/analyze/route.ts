@@ -48,13 +48,7 @@ export async function POST(request: Request) {
         },
         {
           role: "user",
-          content: `Analyze this sales conversation and provide structured feedback: ${transcript}
-          
-          Requirements:
-          1. Scores should be between 0-10
-          2. For insights, use actual quotes from the conversation
-          3. Suggestions should be specific and actionable
-          4. Focus on key moments that could have been handled better`
+          content: `Here's the transcript where the sales rep ('user') is trying to onboard a restaurant ('assisant') to DoorDash: ${transcript}`
         }
       ]
     });

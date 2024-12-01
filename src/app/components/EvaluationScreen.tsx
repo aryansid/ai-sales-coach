@@ -1,8 +1,32 @@
 // EvaluationScreen.tsx
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client';
 import { motion } from 'framer-motion';
-import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft, LucideIcon } from 'lucide-react';
+import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+
+// Type definitions
+interface Score {
+  category: string;
+  score: number;
+  description: string;
+}
+
+interface Insight {
+  message: string;
+  suggestion: string;
+}
+
+interface Analysis {
+  scores: Score[];
+  insights: Insight[];
+}
+
+// Map category names to their respective icons
+const categoryIcons = {
+  'Understanding & Personalization': Brain,
+  'Objection Handling & Trust': Shield,
+  'Value Communication': Target
+};
 
 const ScoreCard = ({ icon: Icon, category, score, description }: {
   icon: LucideIcon;
@@ -11,7 +35,7 @@ const ScoreCard = ({ icon: Icon, category, score, description }: {
   description: string;
 }) => {
   // Calculate gradient color based on score
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score) => {
     if (score >= 90) return 'from-emerald-500/20 to-emerald-500/5';
     if (score >= 75) return 'from-violet-500/20 to-violet-500/5';
     return 'from-amber-500/20 to-amber-500/5';
@@ -78,45 +102,12 @@ const FeedbackItem = ({ message, suggestion }: {
     </motion.div>
 );
 
-export const EvaluationScreen = ({ conversationItems }: {
-  conversationItems: ItemType[];
-}) => {
-  // Dummy scoring data
-  const scores = [
-    {
-      icon: Brain,
-      category: "Understanding & Personalization",
-      score: 85,
-      description: "Strong understanding of Katie's business context and concerns. Could improve on addressing specific local market dynamics."
-    },
-    {
-      icon: Shield,
-      category: "Objection Handling & Trust",
-      score: 78,
-      description: "Good objection handling, maintained professional tone. Room for improvement in building stronger emotional connection."
-    },
-    {
-      icon: Target,
-      category: "Value Communication",
-      score: 82,
-      description: "Clear value proposition communication. Consider adding more specific examples of success with similar restaurants."
-    }
-  ];
-
-  const feedbackItems = [
-    {
-      message: "I understand your concerns about delivery timing, but I can assure you our system is reliable.",
-      suggestion: "Instead of generic reassurance, provide specific data about average delivery times in the Palo Alto area and examples of how other local restaurants manage timing."
-    },
-    {
-      message: "Would you like to hear about our commission structure?",
-      suggestion: "Lead with value before discussing costs. Frame the conversation around incremental revenue potential for their specific restaurant category."
-    },
-    {
-      message: "Our platform has helped many restaurants increase their revenue.",
-      suggestion: "Make this more specific to University Avenue restaurants, mentioning actual percentage increases in order volume during peak student hours."
-    }
-  ];
+export const EvaluationScreen = ({ analysis }) => {
+  // Map the scores with their corresponding icons
+  const scoresWithIcons = analysis.scores.map(score => ({
+    ...score,
+    icon: categoryIcons[score.category] || Sparkles // Sparkles as fallback icon
+  }));
 
   return (
     <div className="h-full w-full bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80">
