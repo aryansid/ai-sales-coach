@@ -1,7 +1,6 @@
 // EvaluationScreen.tsx
-import { ItemType } from '@openai/realtime-api-beta/dist/lib/client';
 import { motion } from 'framer-motion';
-import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft } from 'lucide-react';
+import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft, LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -23,7 +22,7 @@ interface Analysis {
 }
 
 // Map category names to their respective icons
-const categoryIcons = {
+const categoryIcons: Record<string, LucideIcon> = {
   'Understanding & Personalization': Brain,
   'Objection Handling & Trust': Shield,
   'Value Communication': Target
@@ -36,7 +35,7 @@ const ScoreCard = ({ icon: Icon, category, score, description }: {
   description: string;
 }) => {
   // Calculate gradient color based on score
-  const getScoreColor = (score) => {
+  const getScoreColor = (score: any) => {
     if (score >= 90) return 'from-emerald-500/20 to-emerald-500/5';
     if (score >= 75) return 'from-violet-500/20 to-violet-500/5';
     return 'from-amber-500/20 to-amber-500/5';

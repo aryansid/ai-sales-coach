@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     });
 
     // Parse the response to ensure it matches our expected structure
-    const analysis = JSON.parse(completion.choices[0].message.content);
+    const analysis = JSON.parse(completion?.choices[0].message.content || '');
     
     // Validate the structure
     if (!analysis.scores || !analysis.insights) {

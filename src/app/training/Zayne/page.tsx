@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -115,12 +115,20 @@ export default function TrainingSession() {
         }
       }
 
-      // Update conversation items
+      // Update conversation items - Modified to handle interruptions
       setConversationItems((prevItems) => {
         const existingItemIndex = prevItems.findIndex((i) => i.id === item.id);
         if (existingItemIndex !== -1) {
+          // Preserve existing text if new item doesn't have formatted text
+          const updatedItem = {
+            ...item,
+            formatted: {
+              ...item.formatted,
+              text: item.formatted?.text || prevItems[existingItemIndex].formatted?.text
+            }
+          };
           const updatedItems = [...prevItems];
-          updatedItems[existingItemIndex] = item;
+          updatedItems[existingItemIndex] = updatedItem;
           return updatedItems;
         } else {
           return [...prevItems, item];
@@ -131,8 +139,7 @@ export default function TrainingSession() {
       if (item.role === 'assistant') {
         if (delta?.audio) {
           setIsAIResponding(true);
-        } else if (!delta?.audio && item.formatted?.text) { // Check for ERROR
-          // Only set to false when the response is actually complete
+        } else if (!delta?.audio && item.formatted?.text) {
           setIsAIResponding(false);
         }
       }
@@ -212,10 +219,7 @@ export default function TrainingSession() {
         let fullTranscript = '';
         
         conversationItems.forEach((item) => {
-          const contentWithTranscript = item.content?.find(c => 
-            c.type === 'input_audio' || c.type === 'audio'
-          );
-          const transcript = contentWithTranscript?.transcript || '';
+          const transcript = item.formatted?.text || '';
           console.log(`${item.role}: ${transcript}`);
           fullTranscript += `${item.role}: ${transcript}\n`;
         });
@@ -244,39 +248,39 @@ export default function TrainingSession() {
           console.log(analysisData);
           console.log('===========================');
 
-          // Cleanup after analysis is complete
+          // Replace this simple cleanup with more robust error handling
           const client = clientRef.current;
           const wavRecorder = wavRecorderRef.current;
           const wavStreamPlayer = wavStreamPlayerRef.current;
 
-          // Only try to pause/end if we have an active processor
+          // Handle recorder cleanup
           try {
             if (!isMuted) {
-              await wavRecorder.pause();
+              await wavRecorder?.pause();
             }
-            // Only call end() if we have an active session
-            if (wavRecorder.processor) {
+            if (wavRecorder?.processor) {
               await wavRecorder.end();
             }
           } catch (err) {
             console.error('Error stopping recorder:', err);
           }
 
+          // Handle player cleanup
           try {
-            await wavStreamPlayer.interrupt();
+            await wavStreamPlayer?.interrupt();
           } catch (err) {
             console.error('Error stopping player:', err);
           }
 
+          // Handle client cleanup
           try {
-            if (client.isConnected()) {
+            if (client?.isConnected()) {
               client.disconnect();
             }
           } catch (err) {
             console.error('Error disconnecting client:', err);
           }
 
-          // Set analyzing to false and show evaluation
           setIsAnalyzing(false);
           setIsCallActive(false);
           setShowEvaluation(true);
@@ -285,7 +289,6 @@ export default function TrainingSession() {
           console.error('Error getting analysis:', error);
           setIsAnalyzing(false);
         }
-
       } catch (err) {
         console.error('Error ending call:', err);
         setIsAnalyzing(false);

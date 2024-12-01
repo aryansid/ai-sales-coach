@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -12,6 +12,24 @@ import { PreCallCard } from '@/app/components/PreCallCard';
 import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
 import { ErrorPopup } from '@/app/components/ErrorPopup';
+
+// Type definitions
+interface Score {
+  category: string;
+  score: number;
+  description: string;
+}
+
+interface Insight {
+  message: string;
+  suggestion: string;
+}
+
+interface Analysis {
+  scores: Score[];
+  insights: Insight[];
+}
+
 
 // Dynamic import for the visualization
 const Scene = dynamic(() => import('../../components/Scene'), {
@@ -97,25 +115,35 @@ export default function TrainingSession() {
         }
       }
 
-      // Update conversation items
+      // Update conversation items with preservation of text on interruption
       setConversationItems((prevItems) => {
         const existingItemIndex = prevItems.findIndex((i) => i.id === item.id);
         if (existingItemIndex !== -1) {
+          // Keep existing text if the new update doesn't include text
+          const updatedItem = {
+            ...item,
+            formatted: {
+              ...item.formatted,
+              text: item.formatted?.text || prevItems[existingItemIndex].formatted?.text
+            }
+          };
           const updatedItems = [...prevItems];
-          updatedItems[existingItemIndex] = item;
+          updatedItems[existingItemIndex] = updatedItem;
           return updatedItems;
         } else {
           return [...prevItems, item];
         }
       });
 
-      // Modified AI responding logic
+      // AI responding state management
       if (item.role === 'assistant') {
         if (delta?.audio) {
           setIsAIResponding(true);
-        } else if (!delta?.audio && item.formatted?.text) { // Check for ERROR
-          // Only set to false when the response is actually complete
-          setIsAIResponding(false);
+        } else if (!delta?.audio) {
+          // Only set to false when we have a complete message
+          if (item.formatted?.text) {
+            setIsAIResponding(false);
+          }
         }
       }
     });
@@ -194,10 +222,7 @@ export default function TrainingSession() {
         let fullTranscript = '';
         
         conversationItems.forEach((item) => {
-          const contentWithTranscript = item.content?.find(c => 
-            c.type === 'input_audio' || c.type === 'audio'
-          );
-          const transcript = contentWithTranscript?.transcript || '';
+          const transcript = item.formatted?.text || '';
           console.log(`${item.role}: ${transcript}`);
           fullTranscript += `${item.role}: ${transcript}\n`;
         });

@@ -1,5 +1,5 @@
 {
-  "name": "my-sales-trainer",
+  "name": "sales-trainer",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,54 +7,32 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "relay": "node relay-server/index.js",
-    "vercel-build": "npm install --legacy-peer-deps && npm run build"
+    "relay": "node relay-server/index.js"
   },
   "dependencies": {
     "@openai/realtime-api-beta": "github:openai/openai-realtime-api-beta",
-    "@react-three/drei": "^9.117.3",
     "@react-three/fiber": "^9.0.0-beta.1",
-    "@types/three": "^0.170.0",
-    "@types/ws": "^8.5.13",
-    "ai": "^4.0.7",
     "dotenv": "^16.4.5",
     "framer-motion": "^11.12.0",
     "lucide-react": "^0.462.0",
     "next": "15.0.3",
     "openai": "^4.73.1",
-    "pako": "^2.1.0",
     "react": "19.0.0-rc-66855b96-20241106",
     "react-dom": "19.0.0-rc-66855b96-20241106",
-    "react-mic": "^12.4.6",
-    "simplex-noise": "^4.0.3",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1",
-    "three": "^0.170.0",
-    "ws": "^8.18.0",
-    "zod": "^3.23.8"
+    "three": "^0.171.0"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/pako": "^2.0.3",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/react-mic": "^12.4.6",
-    "assert": "^2.1.0",
-    "autoprefixer": "^10.4.20",
-    "browserify-zlib": "^0.2.0",
-    "crypto-browserify": "^3.12.1",
+    "@types/three": "^0.170.0",
+    "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "@typescript-eslint/parser": "^8.16.0",
     "eslint": "^8",
     "eslint-config-next": "15.0.3",
-    "https-browserify": "^1.0.0",
-    "os-browserify": "^0.3.0",
-    "path-browserify": "^1.0.1",
-    "postcss": "^8.4.49",
-    "process": "^0.11.10",
-    "stream-browserify": "^3.0.0",
-    "stream-http": "^3.2.0",
-    "tailwindcss": "^3.4.15",
-    "typescript": "^5",
-    "url": "^0.11.4"
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   },
   "type": "module"
 }

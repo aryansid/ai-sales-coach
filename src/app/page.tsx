@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import LoadingOverlay from './components/LoadingOverlay';
+import LoadingOverlay from '@/app/components/LoadingOverlay';
 import { useRouter } from 'next/navigation';
 
 // WaveformBars component remains unchanged
@@ -46,7 +45,7 @@ const WaveformBars = ({ isActive, color, numBars = 12 }: {
   );
 };
 
-const Scene = dynamic(() => import('./components/Scene'), {
+const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center overflow-visible">
