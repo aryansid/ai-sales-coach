@@ -11,6 +11,7 @@ import { WavRecorder, WavStreamPlayer } from '@/app/lib/wavtools';
 import { PreCallCard } from '@/app/components/PreCallCard';
 import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
+import { ErrorPopup } from '@/app/components/ErrorPopup';
 
 // Dynamic import for the visualization
 const Scene = dynamic(() => import('@/app/components/Scene'), {
@@ -67,6 +68,7 @@ export default function TrainingSession() {
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
@@ -139,6 +141,7 @@ export default function TrainingSession() {
     // Add more detailed error logging
     client.on('error', (event: Error) => {
       console.error('RealtimeClient error details:', event);
+      setShowError(true);
     });
 
     client.on('conversation.interrupted', async () => {
@@ -308,7 +311,7 @@ export default function TrainingSession() {
       }
     } catch (err) {
       console.error('Error toggling mute:', err);
-      // Revert the mute state if there was an error
+      setShowError(true);
       setIsMuted((prev) => !prev);
     }
   };
@@ -322,6 +325,7 @@ export default function TrainingSession() {
 
     if (!client || !wavRecorder || !wavStreamPlayer) {
       console.error("Required resources not initialized");
+      setShowError(true);
       return;
     }
 
@@ -342,6 +346,7 @@ export default function TrainingSession() {
       }
     } catch (err) {
       console.error('Error starting call:', err);
+      setShowError(true);
       if (wavRecorder && sessionActive) {
         await wavRecorder.end();
         setSessionActive(false);
@@ -370,6 +375,10 @@ export default function TrainingSession() {
 
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
+      <ErrorPopup 
+        isVisible={showError} 
+        onClose={() => setShowError(false)} 
+      />
       {/* Background gradients */}
       <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />
         <div className="absolute inset-0">
