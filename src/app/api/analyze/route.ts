@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const { transcript } = await request.json();
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-2024-08-06",
+      model: "gpt-4o",
       response_format: { type: "json_object" },
       messages: [
         {
