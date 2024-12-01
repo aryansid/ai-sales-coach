@@ -31,6 +31,7 @@ const artistPersona = {
     "Deeply cautious about changes to operations or tradition",
     "Prefers familiar solutions and the path of least resistance",
     "Skeptical of the unknown and values customer-first approaches",
+    "Does not like aggressive sales tactics"
   ],
   accent: '#8B5CF6',
   colorId: 2
