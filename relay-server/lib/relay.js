@@ -1,9 +1,11 @@
 import { WebSocketServer } from 'ws';
 import { RealtimeClient } from '@openai/realtime-api-beta';
+import OpenAI from 'openai';
 
 export class RealtimeRelay {
   constructor(apiKey) {
     this.apiKey = apiKey;
+    this.openai = new OpenAI({ apiKey });
     this.sockets = new WeakMap();
     this.wss = null;
   }
@@ -62,12 +64,20 @@ export class RealtimeRelay {
           this.log(`Error parsing event from client: ${data}`);
         }
       };
-      ws.on('message', (data) => {
-        if (!client.isConnected()) {
-          messageQueue.push(data);
-          console.log('messageQueue', messageQueue);
-        } else {
-          messageHandler(data);
+      ws.on('message', async (data) => {
+        try {
+          const event = JSON.parse(data);
+          
+          // Regular message handling
+          if (!client.isConnected()) {
+            messageQueue.push(data);
+          } else {
+            messageHandler(data);
+          }
+        } catch (e) {
+          console.error('=== Message Handler Error ===');
+          console.error('Error details:', e);
+          console.error('=== End Error ===\n');
         }
       });
       ws.on('close', () => client.disconnect());
@@ -108,4 +118,6 @@ export class RealtimeRelay {
   log(...args) {
     console.log(`[RealtimeRelay]`, ...args);
   }
+
+  
 }

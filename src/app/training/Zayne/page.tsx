@@ -36,6 +36,23 @@ const artistPersona = {
   colorId: 0
 };
 
+// Add type definitions
+interface Score {
+  category: string;
+  score: number;
+  description: string;
+}
+
+interface Insight {
+  message: string;
+  suggestion: string;
+}
+
+interface Analysis {
+  scores: Score[];
+  insights: Insight[];
+}
+
 export default function TrainingSession() {
   // Add new state variables
   const [isPreCall, setIsPreCall] = useState(true);
@@ -46,6 +63,8 @@ export default function TrainingSession() {
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
@@ -183,47 +202,88 @@ export default function TrainingSession() {
       }
     } else {
       try {
-        const client = clientRef.current;
-        const wavRecorder = wavRecorderRef.current;
-        const wavStreamPlayer = wavStreamPlayerRef.current;
-
-        if (!client || !wavRecorder || !wavStreamPlayer) {
-          throw new Error("Required resources not initialized");
-        }
-
-        // Only try to pause/end if we have an active processor
-        try {
-          if (!isMuted) {
-            await wavRecorder.pause();
-          }
-          // Only call end() if we have an active session
-          if (wavRecorder.processor) {
-            await wavRecorder.end();
-          }
-        } catch (err) {
-          console.error('Error stopping recorder:', err);
-        }
-
-        try {
-          await wavStreamPlayer.interrupt();
-        } catch (err) {
-          console.error('Error stopping player:', err);
-        }
-
-        try {
-          if (client.isConnected()) {
-            client.disconnect();
-          }
-        } catch (err) {
-          console.error('Error disconnecting client:', err);
-        }
-
-        // After successful cleanup, show evaluation and set call inactive
-        setShowEvaluation(true);
-        setIsCallActive(false);
+        // Build the transcript
+        console.log('=== Call Transcript ===');
+        let fullTranscript = '';
         
+        conversationItems.forEach((item) => {
+          const contentWithTranscript = item.content?.find(c => 
+            c.type === 'input_audio' || c.type === 'audio'
+          );
+          const transcript = contentWithTranscript?.transcript || '';
+          console.log(`${item.role}: ${transcript}`);
+          fullTranscript += `${item.role}: ${transcript}\n`;
+        });
+        console.log('===================');
+
+        // Set analyzing state to true before making the request
+        setIsAnalyzing(true);
+
+        // Get analysis from our API route
+        try {
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ transcript: fullTranscript }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Analysis request failed');
+          }
+
+          const analysisData = await response.json();
+          setAnalysis(analysisData);
+          console.log('=== Conversation Analysis ===');
+          console.log(analysisData);
+          console.log('===========================');
+
+          // Cleanup after analysis is complete
+          const client = clientRef.current;
+          const wavRecorder = wavRecorderRef.current;
+          const wavStreamPlayer = wavStreamPlayerRef.current;
+
+          // Only try to pause/end if we have an active processor
+          try {
+            if (!isMuted) {
+              await wavRecorder.pause();
+            }
+            // Only call end() if we have an active session
+            if (wavRecorder.processor) {
+              await wavRecorder.end();
+            }
+          } catch (err) {
+            console.error('Error stopping recorder:', err);
+          }
+
+          try {
+            await wavStreamPlayer.interrupt();
+          } catch (err) {
+            console.error('Error stopping player:', err);
+          }
+
+          try {
+            if (client.isConnected()) {
+              client.disconnect();
+            }
+          } catch (err) {
+            console.error('Error disconnecting client:', err);
+          }
+
+          // Set analyzing to false and show evaluation
+          setIsAnalyzing(false);
+          setIsCallActive(false);
+          setShowEvaluation(true);
+
+        } catch (error) {
+          console.error('Error getting analysis:', error);
+          setIsAnalyzing(false);
+        }
+
       } catch (err) {
         console.error('Error ending call:', err);
+        setIsAnalyzing(false);
       }
     }
   };
@@ -287,6 +347,25 @@ export default function TrainingSession() {
     }
   };
 
+  // Add loading animation component
+  const LoadingAnalysis = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50"
+    >
+      <div className="flex flex-col items-center gap-4">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="w-12 h-12 border-4 border-violet-200 border-t-violet-500 rounded-full"
+        />
+        <p className="text-zinc-600 font-medium">Analyzing conversation...</p>
+      </div>
+    </motion.div>
+  );
+
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
       {/* Background gradients */}
@@ -298,7 +377,8 @@ export default function TrainingSession() {
 
       <div className="relative p-4 h-screen">
         <AnimatePresence mode="wait">
-          {showEvaluation ? (
+          {isAnalyzing && <LoadingAnalysis />}
+          {showEvaluation && analysis ? (
             <motion.div
               key="evaluation"
               initial={{ opacity: 0 }}
@@ -306,9 +386,9 @@ export default function TrainingSession() {
               exit={{ opacity: 0 }}
               className="h-full"
             >
-              <EvaluationScreen conversationItems={conversationItems} />
+              <EvaluationScreen analysis={analysis} />
             </motion.div>
-          ) : (
+          ) : !isAnalyzing && !showEvaluation ? (
             <motion.div
               key="chat"
               initial={{ opacity: 0 }}
@@ -369,7 +449,7 @@ export default function TrainingSession() {
                 </div>
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </div>

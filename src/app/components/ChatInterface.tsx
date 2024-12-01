@@ -29,6 +29,11 @@ export const ChatInterface = ({
     scrollToBottom();
   }, [conversationItems]);
 
+  const handleCallToggle = () => {
+    console.log('Call button pressed');
+    onToggleCall();
+  };
+
   return (
     <div className="h-full w-full relative">
       {/* Chat Container with Fade Effects */}
@@ -111,7 +116,7 @@ export const ChatInterface = ({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={onToggleCall}
+            onClick={handleCallToggle}
             className={`p-2.5 rounded-full transition-colors duration-200
               ${isCallActive 
                 ? 'bg-red-500/20 text-red-500' 

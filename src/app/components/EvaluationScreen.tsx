@@ -142,7 +142,7 @@ export const EvaluationScreen = ({ conversationItems }: {
         <div className="flex-1 overflow-y-auto space-y-12 min-h-0">
           {/* Scores Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {scores.map((score, index) => (
+            {scoresWithIcons.map((score, index) => (
               <ScoreCard 
                 key={index}
                 icon={score.icon}
@@ -159,7 +159,7 @@ export const EvaluationScreen = ({ conversationItems }: {
               Conversation Insights
             </h2>
             <div className="space-y-4">
-              {feedbackItems.map((item, index) => (
+              {analysis.insights.map((item, index) => (
                 <FeedbackItem 
                   key={index}
                   message={item.message}
