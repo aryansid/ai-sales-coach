@@ -376,8 +376,8 @@ export default function TrainingSession() {
       <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />
         <div className="absolute inset-0">
           <div className="absolute top-0 -right-1/4 w-1/2 h-1/2 bg-gradient-to-br from-violet-100/20 via-blue-100/10 to-transparent rounded-full blur-3xl" />
-        <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-tr from-amber-100/20 via-purple-100/10 to-transparent rounded-full blur-3xl" />
-      </div>
+          <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-tr from-amber-100/20 via-purple-100/10 to-transparent rounded-full blur-3xl" />
+        </div>
 
       <div className="relative p-4 h-screen">
         <AnimatePresence mode="wait">
@@ -458,3 +458,4 @@ export default function TrainingSession() {
       </div>
     </div>
   );
+}
