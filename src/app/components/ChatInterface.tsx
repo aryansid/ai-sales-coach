@@ -38,9 +38,8 @@ export const ChatInterface = ({
     const content = 
       item.formatted?.transcript ||
       item.formatted?.text ||
-      item.text ||
-      (item.content?.find(c =>
-        c.type === 'input_audio' ||
+      (item.content?.find(c => 
+        c.type === 'input_audio' || 
         c.type === 'audio'
       )?.transcript) ||
       '';
