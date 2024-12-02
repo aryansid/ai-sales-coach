@@ -35,20 +35,19 @@ export const ChatInterface = ({
   };
 
   const getMessageContent = (item: ItemType) => {
-    const content = 
-      item.formatted?.transcript ||
-      item.formatted?.text ||
-      (item.content?.find(c => 
-        c.type === 'input_audio' || 
-        c.type === 'audio'
-      )?.transcript) ||
-      '';
+    // Check for audio content first
+    const audioContent = ('content' in item) 
+      ? item.content?.find(c => c.type === 'input_audio' || c.type === 'audio')
+      : null;
 
-    if (item.role === 'assistant' && item.status === 'interrupted') {
-      return content || '[Message interrupted]';
+    if (audioContent?.transcript) {
+      return audioContent.transcript;
     }
 
-    return content || (item.role === 'user' ? '[inaudible]' : '');
+    // Fall back to formatted content
+    return item.formatted?.transcript ||
+           item.formatted?.text ||
+           (item.role === 'user' ? '[inaudible]' : '');
   };
 
   return (
@@ -66,7 +65,6 @@ export const ChatInterface = ({
           <div className="py-6 space-y-4">
             {conversationItems.map((item) => {
               const content = getMessageContent(item);
-              const isInterrupted = item.status === 'interrupted';
               
               return (
                 <motion.div
@@ -82,8 +80,7 @@ export const ChatInterface = ({
                       p-4 rounded-2xl backdrop-blur-md shadow-lg
                       ${item.role === 'user' 
                         ? 'bg-zinc-900/10 border border-zinc-800/10' 
-                        : `bg-violet-500/10 border border-violet-500/10 
-                           ${isInterrupted ? 'opacity-75' : ''}`
+                        : 'bg-violet-500/10 border border-violet-500/10'
                       }
                     `}
                   >
@@ -94,11 +91,6 @@ export const ChatInterface = ({
                       }
                     `}>
                       {content}
-                      {isInterrupted && (
-                        <span className="ml-2 text-xs text-violet-400">
-                          (interrupted)
-                        </span>
-                      )}
                     </div>
                   </div>
                 </motion.div>

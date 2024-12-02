@@ -31,6 +31,7 @@ interface Analysis {
 }
 
 
+
 // Dynamic import for the visualization
 const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
@@ -212,7 +213,7 @@ export default function TrainingSession() {
         let fullTranscript = '';
         
         conversationItems.forEach((item) => {
-          const contentWithTranscript = item.content?.find(c => 
+          const contentWithTranscript = (item as any).content?.find((c: any) => 
             c.type === 'input_audio' || c.type === 'audio'
           );
           const transcript = contentWithTranscript?.transcript || '';

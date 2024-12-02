@@ -231,7 +231,7 @@ export default function TrainingSession() {
         let fullTranscript = '';
 
         conversationItems.forEach((item) => {
-          const contentWithTranscript = item.content?.find(c => 
+          const contentWithTranscript = (item as any).content?.find((c: any) => 
             c.type === 'input_audio' || c.type === 'audio'
           );
           const transcript = contentWithTranscript?.transcript || '';
@@ -271,10 +271,10 @@ export default function TrainingSession() {
           // Only try to pause/end if we have an active processor
           try {
             if (!isMuted) {
-              await wavRecorder.pause();
+              wavRecorder?.pause();
             }
             // Only call end() if we have an active session
-            if (wavRecorder.processor) {
+            if (wavRecorder?.processor) {
               await wavRecorder.end();
             }
           } catch (err) {
@@ -282,13 +282,13 @@ export default function TrainingSession() {
           }
 
           try {
-            await wavStreamPlayer.interrupt();
+            wavStreamPlayer?.interrupt();
           } catch (err) {
             console.error('Error stopping player:', err);
           }
 
           try {
-            if (client.isConnected()) {
+            if (client?.isConnected()) {
               client.disconnect();
             }
           } catch (err) {
