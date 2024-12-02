@@ -13,6 +13,25 @@ import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
 import { ErrorPopup } from '@/app/components/ErrorPopup';
 
+// Type definitions
+interface Score {
+  category: string;
+  score: number;
+  description: string;
+}
+
+interface Insight {
+  message: string;
+  suggestion: string;
+}
+
+interface Analysis {
+  scores: Score[];
+  insights: Insight[];
+}
+
+
+
 // Dynamic import for the visualization
 const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
