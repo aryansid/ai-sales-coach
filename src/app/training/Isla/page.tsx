@@ -221,61 +221,81 @@ export default function TrainingSession() {
       }
     } else {
       try {
-        // Build the transcript
-        console.log('=== Call Transcript ===');
+        // First, build transcript from existing conversation items
         let fullTranscript = '';
-        
         conversationItems.forEach((item) => {
           const contentWithTranscript = (item as any).content?.find((c: any) => 
             c.type === 'input_audio' || c.type === 'audio'
           );
           const transcript = contentWithTranscript?.transcript || '';
-          console.log(`${item.role}: ${transcript}`);
           fullTranscript += `${item.role}: ${transcript}\n`;
         });
-        console.log('===================');
+
+        // Log transcript for debugging
+        console.log('=== Conversation Transcript ===');
+        console.log(fullTranscript);
+        console.log('===========================');
+
+        // Get references to all resources
+        const client = clientRef.current;
+        const wavRecorder = wavRecorderRef.current;
+        const wavStreamPlayer = wavStreamPlayerRef.current;
+
+        // Stop AI from speaking
+        if (wavStreamPlayer) {
+          const trackSampleOffset = await wavStreamPlayer.interrupt();
+          if (trackSampleOffset?.trackId) {
+            const { trackId, offset } = trackSampleOffset;
+            await client?.cancelResponse(trackId, offset);
+          }
+        }
+
+        // Disconnect the client
+        if (client?.isConnected()) {
+          await client.disconnect();
+        }
 
         setIsAnalyzing(true);
 
-        // Get analysis from API
+        // Send transcript for analysis
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: fullTranscript }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Analysis request failed');
+        }
+
+        const analysisData = await response.json();
+        setAnalysis(analysisData);
+
+        // Cleanup after analysis is complete
         try {
-          const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ transcript: fullTranscript }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Analysis request failed');
+          if (!isMuted) {
+            wavRecorder?.pause();
           }
-
-          const analysisData = await response.json();
-          setAnalysis(analysisData);
-          
-          // Cleanup
-          const client = clientRef.current;
-          const wavRecorder = wavRecorderRef.current;
-          const wavStreamPlayer = wavStreamPlayerRef.current;
-
-          await wavRecorder?.pause();
           if (wavRecorder?.processor) {
             await wavRecorder.end();
           }
-          await wavStreamPlayer?.interrupt();
-          client?.disconnect();
-
-          setIsAnalyzing(false);
-          setIsCallActive(false);
-          setShowEvaluation(true);
-
-        } catch (error) {
-          console.error('Error getting analysis:', error);
-          setIsAnalyzing(false);
+        } catch (err) {
+          console.error('Error stopping recorder:', err);
         }
-      } catch (err) {
-        console.error('Error ending call:', err);
+
+        try {
+          wavStreamPlayer?.interrupt();
+        } catch (err) {
+          console.error('Error stopping player:', err);
+        }
+
+        // Set analyzing to false and show evaluation
+        setIsAnalyzing(false);
+        setIsCallActive(false);
+        setShowEvaluation(true);
+
+      } catch (error) {
+        console.error('Error getting analysis:', error);
         setIsAnalyzing(false);
       }
     }
