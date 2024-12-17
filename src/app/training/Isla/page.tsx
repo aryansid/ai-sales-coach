@@ -250,7 +250,16 @@ export default function TrainingSession() {
           }
         }
 
-        // Disconnect the client
+        // Cleanup audio resources first
+        try {
+          if (wavRecorder?.processor) {
+            await wavRecorder.end();  // Just end directly, no need to pause first
+          }
+        } catch (err) {
+          console.error('Error stopping recorder:', err);
+        }
+
+        // Then disconnect the client
         if (client?.isConnected()) {
           await client.disconnect();
         }
@@ -270,24 +279,6 @@ export default function TrainingSession() {
 
         const analysisData = await response.json();
         setAnalysis(analysisData);
-
-        // Cleanup after analysis is complete
-        try {
-          if (!isMuted) {
-            wavRecorder?.pause();
-          }
-          if (wavRecorder?.processor) {
-            await wavRecorder.end();
-          }
-        } catch (err) {
-          console.error('Error stopping recorder:', err);
-        }
-
-        try {
-          wavStreamPlayer?.interrupt();
-        } catch (err) {
-          console.error('Error stopping player:', err);
-        }
 
         // Set analyzing to false and show evaluation
         setIsAnalyzing(false);
