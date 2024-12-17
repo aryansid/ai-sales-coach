@@ -68,6 +68,7 @@ export default function TrainingSession() {
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [fullTranscript, setFullTranscript] = useState('');
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
@@ -217,18 +218,18 @@ export default function TrainingSession() {
     } else {
       try {
         // First, build transcript from existing conversation items
-        let fullTranscript = '';
+        let transcriptText = '';
         conversationItems.forEach((item) => {
           const contentWithTranscript = (item as any).content?.find((c: any) => 
             c.type === 'input_audio' || c.type === 'audio'
           );
           const transcript = contentWithTranscript?.transcript || '';
-          fullTranscript += `${item.role}: ${transcript}\n`;
+          transcriptText += `${item.role}: ${transcript}\n`;
         });
 
         // Log transcript for debugging
         console.log('=== Conversation Transcript ===');
-        console.log(fullTranscript);
+        console.log(transcriptText);
         console.log('===========================');
 
         // Get references to all resources
@@ -259,13 +260,14 @@ export default function TrainingSession() {
           await client.disconnect();
         }
 
+        setFullTranscript(transcriptText);
         setIsAnalyzing(true);
 
         // Send transcript for analysis
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: fullTranscript }),
+          body: JSON.stringify({ transcript: transcriptText }),
         });
 
         if (!response.ok) {
@@ -371,7 +373,8 @@ export default function TrainingSession() {
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
       <ErrorPopup 
         isVisible={showError} 
-        onClose={() => setShowError(false)} 
+        onClose={() => setShowError(false)}
+        message="" 
       />
       {/* Background gradients */}
       <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />
@@ -391,7 +394,7 @@ export default function TrainingSession() {
               exit={{ opacity: 0 }}
               className="h-full"
             >
-              <EvaluationScreen analysis={analysis} />
+              <EvaluationScreen analysis={analysis} transcript={fullTranscript} />
             </motion.div>
           ) : !isAnalyzing && !showEvaluation ? (
             <motion.div

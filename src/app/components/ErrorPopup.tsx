@@ -4,9 +4,10 @@ import { XCircle } from 'lucide-react';
 interface ErrorPopupProps {
   isVisible: boolean;
   onClose: () => void;
+  message: string;
 }
 
-export const ErrorPopup = ({ isVisible, onClose }: ErrorPopupProps) => {
+export const ErrorPopup = ({ isVisible, onClose, message }: ErrorPopupProps) => {
   return (
     <AnimatePresence>
       {isVisible && (
@@ -27,7 +28,7 @@ export const ErrorPopup = ({ isVisible, onClose }: ErrorPopupProps) => {
                 <XCircle className="w-6 h-6 text-red-500" />
               </div>
               <h3 className="text-lg font-medium text-zinc-900">
-                Something went wrong
+                {message || "Something went wrong"}
               </h3>
               <p className="text-zinc-600">
                 There was an issue. Please contact the admin team.

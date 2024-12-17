@@ -86,6 +86,7 @@ export default function TrainingSession() {
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [fullTranscript, setFullTranscript] = useState('');
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
@@ -236,18 +237,19 @@ export default function TrainingSession() {
     } else {
       try {
         // First, build transcript from existing conversation items
-        let fullTranscript = '';
+        let transcriptText = '';
         conversationItems.forEach((item) => {
           const contentWithTranscript = (item as any).content?.find((c: any) => 
             c.type === 'input_audio' || c.type === 'audio'
           );
           const transcript = contentWithTranscript?.transcript || '';
-          fullTranscript += `${item.role}: ${transcript}\n`;
+          transcriptText += `${item.role}: ${transcript}\n`;
         });
+
 
         // Log transcript for debugging
         console.log('=== Conversation Transcript ===');
-        console.log(fullTranscript);
+        console.log(transcriptText);
         console.log('===========================');
 
         // Get references to all resources
@@ -277,14 +279,14 @@ export default function TrainingSession() {
         if (client?.isConnected()) {
           await client.disconnect();
         }
-
+        setFullTranscript(transcriptText);
         setIsAnalyzing(true);
 
         // Send transcript for analysis
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: fullTranscript }),
+          body: JSON.stringify({ transcript: transcriptText }),
         });
 
         if (!response.ok) {
@@ -404,7 +406,7 @@ export default function TrainingSession() {
               exit={{ opacity: 0 }}
               className="h-full"
             >
-              <EvaluationScreen analysis={analysis} />
+              <EvaluationScreen analysis={analysis} transcript={fullTranscript} />
             </motion.div>
           ) : !isAnalyzing && !showEvaluation ? (
             <motion.div

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft, LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { DownloadButton } from '@/app/components/DownloadButton';
 
 // Type definitions
 interface Score {
@@ -102,7 +103,7 @@ const FeedbackItem = ({ message, suggestion }: {
     </motion.div>
 );
 
-export const EvaluationScreen = ({ analysis }: { analysis: Analysis }) => {
+export const EvaluationScreen = ({ analysis, transcript }: { analysis: Analysis, transcript: string }) => {
   const router = useRouter();
   
   if (!analysis) {
@@ -131,9 +132,12 @@ export const EvaluationScreen = ({ analysis }: { analysis: Analysis }) => {
             <ArrowLeft className="w-4 h-4" />
             Back to personas
           </Link>
-          <h1 className="font-serif text-4xl md:text-5xl text-zinc-900 ml-4">
-            Performance Analysis
-          </h1>
+          <div className="flex items-center justify-between ml-4">
+            <h1 className="font-serif text-4xl md:text-5xl text-zinc-900">
+              Performance Analysis
+            </h1>
+            <DownloadButton analysis={analysis} transcript={transcript} />
+          </div>
         </motion.div>
 
         <div className="flex-1 overflow-y-auto space-y-12 min-h-0">
