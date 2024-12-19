@@ -12,6 +12,7 @@ import { PreCallCard } from '@/app/components/PreCallCard';
 import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
 import { ErrorPopup } from '@/app/components/ErrorPopup';
+import { ConnectingOverlay } from '@/app/components/ConnectingOverlay';
 
 // Type definitions
 interface Score {
@@ -74,11 +75,12 @@ export default function TrainingSession() {
   const wavRecorderRef = useRef<WavRecorder>();
   const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
-  // Add these state variables
+  // Add state variables
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showError, setShowError] = useState(false);
   const [fullTranscript, setFullTranscript] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     // Initialize RealtimeClient with API key
@@ -95,7 +97,9 @@ export default function TrainingSession() {
       voice: 'coral',
       input_audio_transcription: { model: 'whisper-1' },
       turn_detection: {
-        type: 'server_vad'
+        type: 'server_vad',
+        threshold: 0.65,
+        prefix_padding_ms: 350
       },
       //threshold: 0.65,
       instructions: `
@@ -115,13 +119,11 @@ export default function TrainingSession() {
       5. Use fillers like "well...", "frankly...", "hold on..." to sound like a real person that's also authorative. 
       
       Ensure you eventually conclude the conversation. If the sales representative seems unresponsive to your concerns or the discussion becomes repetitive, don’t hesitate to cut it short—it's encouraged. However, if the representative is attentive and addresses your concerns, wrap up the conversation amicably, but make sure to scrutinize first and then agree.
-      
       `
     });
 
     // Set up event handlers with error logging
     client.on('conversation.updated', async ({ item, delta }: { item: ItemType, delta: any }) => {
-      console.log('Conversation updated:', { item, delta });
       if (delta?.audio && wavStreamPlayerRef.current) {
         try {
           await wavStreamPlayerRef.current.add16BitPCM(delta.audio, item.id);
@@ -331,6 +333,7 @@ export default function TrainingSession() {
   // Add new startCall handler
   const startCall = async () => {
     setIsPreCall(false);
+    setIsConnecting(true);
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
@@ -348,7 +351,7 @@ export default function TrainingSession() {
       
       setSessionActive(true);
       setIsCallActive(true);
-
+      client.sendUserMessageContent([{ type: 'input_text', text: `<context>: The Doordash sales rep just called you and you just picked up the phone. Greet them and ask them what they want. You don't know who they are so keep it short and warm.` }]);
       if (!isMuted) {
         await wavRecorder.record((data) => {
           if (client.isConnected()) {
@@ -356,12 +359,14 @@ export default function TrainingSession() {
           }
         });
       }
+      setIsConnecting(false);
     } catch (err) {
       console.error('Error starting call:', err);
       setShowError(true);
       if (wavRecorder && sessionActive) {
         await wavRecorder.end();
         setSessionActive(false);
+        setIsConnecting(false);
       }
     }
   };
@@ -400,6 +405,7 @@ export default function TrainingSession() {
       </div>
 
       <div className="relative p-4 h-screen">
+        <ConnectingOverlay isVisible={isConnecting} />
         <AnimatePresence mode="wait">
           {isAnalyzing && <LoadingAnalysis />}
           {showEvaluation && analysis ? (
@@ -449,7 +455,7 @@ export default function TrainingSession() {
                       ) : (
                         <ChatInterface
                           key="chat"
-                          conversationItems={conversationItems}
+                          conversationItems={conversationItems.slice(1)}
                           isCallActive={isCallActive}
                           isMuted={isMuted}
                           onToggleCall={toggleCall}

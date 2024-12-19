@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client';
 
+type TranscriptionStatus = 'transcribing' | 'completed' | 'inaudible' | 'in_progress';
+
 export const ChatInterface = ({ 
   conversationItems,
   isCallActive,
@@ -30,24 +32,41 @@ export const ChatInterface = ({
   }, [conversationItems]);
 
   const handleCallToggle = () => {
-    console.log('Call button pressed');
+    //console.log('Call button pressed');
     onToggleCall();
   };
 
-  const getMessageContent = (item: ItemType) => {
-    // Check for audio content first
+  const getMessageContent = (item: ItemType): { content: string; status: TranscriptionStatus } => {
+    if ((item as any)?.status === 'in_progress') { // TODO: Fix this
+      return {
+        content: '',
+        status: 'transcribing'
+      };
+    }
+  
     const audioContent = ('content' in item) 
       ? item.content?.find(c => c.type === 'input_audio' || c.type === 'audio')
       : null;
-
+  
     if (audioContent?.transcript) {
-      return audioContent.transcript;
+      return { 
+        content: audioContent.transcript,
+        status: 'completed'
+      };
     }
-
+  
     // Fall back to formatted content
-    return item.formatted?.transcript ||
-           item.formatted?.text ||
-           (item.role === 'user' ? '[inaudible]' : '');
+    const formattedContent = item.formatted?.transcript || item.formatted?.text;
+    if (formattedContent) {
+      return {
+        content: formattedContent,
+        status: 'completed'
+      };
+    }
+    return {
+      content: '',
+      status: item.role === 'user' ? 'transcribing' : 'completed'
+    };
   };
 
   return (
@@ -64,7 +83,10 @@ export const ChatInterface = ({
         >
           <div className="py-6 space-y-4">
             {conversationItems.map((item) => {
-              const content = getMessageContent(item);
+              const { content, status } = getMessageContent(item);
+              
+              // Skip rendering if content is empty or only whitespace
+              if (!content?.trim() && status === 'completed') return null;
               
               return (
                 <motion.div
@@ -90,7 +112,15 @@ export const ChatInterface = ({
                         : 'text-violet-900'
                       }
                     `}>
-                      {content}
+                      {status === 'transcribing' ? (
+                        <TranscribingIndicator />
+                      ) : status === 'inaudible' ? (
+                        <span className="text-zinc-500 italic">
+                          [Unable to transcribe audio]
+                        </span>
+                      ) : (
+                        content
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -145,3 +175,27 @@ export const ChatInterface = ({
     </div>
   );
 };
+
+
+const TranscribingIndicator = () => (
+  <div className="flex items-center gap-2">
+    <div className="text-sm text-zinc-500">Transcribing</div>
+    <div className="flex gap-1">
+      {[...Array(3)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="w-1.5 h-1.5 bg-violet-500/50 rounded-full"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.5, 1, 0.5]
+          }}
+          transition={{
+            duration: 1,
+            repeat: Infinity,
+            delay: i * 0.2
+          }}
+        />
+      ))}
+    </div>
+  </div>
+);

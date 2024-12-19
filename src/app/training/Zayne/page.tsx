@@ -11,6 +11,8 @@ import { WavRecorder, WavStreamPlayer } from '@/app/lib/wavtools';
 import { PreCallCard } from '@/app/components/PreCallCard';
 import { ChatInterface } from '@/app/components/ChatInterface';
 import { EvaluationScreen } from '@/app/components/EvaluationScreen';
+import { ConnectingOverlay } from '@/app/components/ConnectingOverlay';
+import { ErrorPopup } from '@/app/components/ErrorPopup';
 
 // Type definitions
 interface Score {
@@ -85,8 +87,10 @@ export default function TrainingSession() {
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [showError, setShowError] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [fullTranscript, setFullTranscript] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
@@ -110,9 +114,10 @@ export default function TrainingSession() {
       voice: 'sage',
       input_audio_transcription: { model: 'whisper-1' },
       turn_detection: {
-        type: 'server_vad'
+        type: 'server_vad',
+        threshold: 0.65,
+        prefix_padding_ms: 350
       },
-      //threshold: 0.65,
       instructions: `
       You are Zayne, a passionate and innovative restaurant owner who views food as a form of art. You own Savor Heights, an upscale restaurant in Palo Alto known for its unique culinary experiences and unmatched quality. You take immense pride in creating dishes that offer not just flavor but a memorable experience for your in-house customers. Your reputation as a culinary artist is critical to you, and you fear that delivery might dilute the exclusivity and quality of your offerings.
       
@@ -334,12 +339,14 @@ export default function TrainingSession() {
   // Add new startCall handler
   const startCall = async () => {
     setIsPreCall(false);
+    setIsConnecting(true);
     const client = clientRef.current;
     const wavRecorder = wavRecorderRef.current;
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
     if (!client || !wavRecorder || !wavStreamPlayer) {
       console.error("Required resources not initialized");
+      setShowError(true);
       return;
     }
 
@@ -347,10 +354,10 @@ export default function TrainingSession() {
       await client.connect();
       await wavStreamPlayer.connect();
       await wavRecorder.begin();
-
+      
       setSessionActive(true);
       setIsCallActive(true);
-
+      client.sendUserMessageContent([{ type: 'input_text', text: `<context>: The Doordash sales rep just called you and you just picked up the phone. Greet them and ask them what they want. You don't know who they are so keep it short and warm.` }]);
       if (!isMuted) {
         await wavRecorder.record((data) => {
           if (client.isConnected()) {
@@ -358,11 +365,14 @@ export default function TrainingSession() {
           }
         });
       }
+      setIsConnecting(false);
     } catch (err) {
       console.error('Error starting call:', err);
+      setShowError(true);
       if (wavRecorder && sessionActive) {
         await wavRecorder.end();
         setSessionActive(false);
+        setIsConnecting(false);
       }
     }
   };
@@ -388,6 +398,11 @@ export default function TrainingSession() {
 
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
+      <ErrorPopup 
+        isVisible={showError} 
+        onClose={() => setShowError(false)}
+        message="" 
+      />
       {/* Background gradients */}
       <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />
         <div className="absolute inset-0">
@@ -396,6 +411,7 @@ export default function TrainingSession() {
         </div>
 
       <div className="relative p-4 h-screen">
+      <ConnectingOverlay isVisible={isConnecting} />
         <AnimatePresence mode="wait">
           {isAnalyzing && <LoadingAnalysis />}
           {showEvaluation && analysis ? (
