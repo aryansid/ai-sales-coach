@@ -461,7 +461,7 @@ export default function TrainingSession() {
                       ) : (
                         <ChatInterface
                           key="chat"
-                          conversationItems={conversationItems}
+                          conversationItems={conversationItems.slice(1)}
                           isCallActive={isCallActive}
                           isMuted={isMuted}
                           onToggleCall={toggleCall}

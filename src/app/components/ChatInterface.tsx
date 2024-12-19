@@ -37,12 +37,12 @@ export const ChatInterface = ({
   };
 
   const getMessageContent = (item: ItemType): { content: string; status: TranscriptionStatus } => {
-    if ((item as any)?.status === 'in_progress') { // TODO: Fix this
+    /*if ((item as any)?.status === 'in_progress') { // TODO: Fix this
       return {
         content: '',
         status: 'transcribing'
       };
-    }
+    }*/
   
     const audioContent = ('content' in item) 
       ? item.content?.find(c => c.type === 'input_audio' || c.type === 'audio')
@@ -86,7 +86,7 @@ export const ChatInterface = ({
               const { content, status } = getMessageContent(item);
               
               // Skip rendering if content is empty or only whitespace
-              if (!content?.trim() && status === 'completed') return null;
+              //if (!content?.trim() && status === 'completed') return null;
               
               return (
                 <motion.div
