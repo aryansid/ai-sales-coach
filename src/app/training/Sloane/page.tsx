@@ -270,7 +270,7 @@ export default function TrainingSession() {
         const response = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: transcriptText }),
+          body: JSON.stringify({ type: 'eval', data: { transcript: transcriptText } }),
         });
 
         if (!response.ok) {

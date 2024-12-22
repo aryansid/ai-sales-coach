@@ -7,6 +7,8 @@ import { Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import LoadingOverlay from '@/app/components/LoadingOverlay';
 import { useRouter } from 'next/navigation';
+import { WelcomeCard } from '@/app/components/WelcomeCard';
+import LoadingCreatingPersonas from '@/app/components/LoadingCreatingPersonas';
 
 // WaveformBars component remains unchanged
 const WaveformBars = ({ isActive, color, numBars = 12 }: {
@@ -55,8 +57,8 @@ const Scene = dynamic(() => import('@/app/components/Scene'), {
   )
 });
 
-// Personas array remains unchanged
-const personas = [
+// Define the existing personas array
+const existingPersonas = [
   {
     id: 'Zayne',
     name: 'The Artist',
@@ -96,21 +98,66 @@ export default function Home() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showWelcomeCard, setShowWelcomeCard] = useState(true);
+  const [userInfo, setUserInfo] = useState<{ company: string; services: string } | null>(null);
+  const [personas, setPersonas] = useState(existingPersonas);
   const router = useRouter();
+
+  // Clear localStorage and reset state on page load
+  useEffect(() => {
+    localStorage.removeItem('userInfo');
+    setShowWelcomeCard(true);
+    setUserInfo(null);
+  }, []); // Empty dependency array means this runs once on mount
 
   const handleCardClick = (personaId: string) => {
     setIsLoading(true);
     router.push(`/training/${personaId}`);
   };
 
-  useEffect(() => {
-    if (isLoading) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 3000);
-      return () => clearTimeout(timer);
+  const handleWelcomeSubmit = async (data: { company: string; services: string }) => {
+    setUserInfo(data);
+    setShowWelcomeCard(false);
+    setIsLoading(true);
+
+    try {
+      console.log('Sending request with data:', data);
+
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'create_persona', data }),
+      });
+
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        console.error('Server error:', responseData);
+        throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      console.log('Server response:', responseData);
+      const personasData = responseData;
+      console.log('Generated Personas:', personasData);
+    } catch (error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [isLoading]);
+  };
+
+  useEffect(() => {
+    const storedUserInfo = localStorage.getItem('userInfo');
+    if (storedUserInfo) {
+      setUserInfo(JSON.parse(storedUserInfo));
+      setShowWelcomeCard(false);
+    }
+  }, []);
 
   const getActiveAccentColor = () => {
     const activePersona = personas.find(p => p.id === hoveredCard);
@@ -119,7 +166,8 @@ export default function Home() {
 
   return (
     <>
-      {isLoading && <LoadingOverlay />}
+      {showWelcomeCard && <WelcomeCard onSubmit={handleWelcomeSubmit} />}
+      {isLoading && <LoadingCreatingPersonas />}
       <div className="min-h-screen overflow-hidden font-sans relative">
         {/* Background gradients */}
         <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />

@@ -279,7 +279,7 @@ export default function TrainingSession() {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ transcript: transcriptText }),
+            body: JSON.stringify({ type: 'eval', data: { transcript: transcriptText } }),
           });
 
         if (!response.ok) {
