@@ -12,30 +12,21 @@ const PersonaSchema = z.object({
     occupation: z.string().describe('Specific job title with industry context and career trajectory details.'),
     race: z.string().describe('Detailed ethnic and cultural background that shapes life experiences and perspectives.'),
     sex: z.string().describe('Gender identity and any relevant context about how it influences their life decisions.'),
-    income_bracket: z.string().describe('Specific annual income range with context about career progression and household earnings.'),
-    location_type: z.string().describe('Detailed description of living environment including specific region, community type, and local economic conditions.')
-  }),
-  life_stage: z.object({
+    location_type: z.string().describe('Detailed description of living environment including specific region, community type, and local economic conditions.'),
     family_status: z.string().describe('Detailed family dynamics including relationship history, family structure, and living arrangements.'),
-    dependents: z.number().describe('Number and types of dependents including children, elderly parents, or other family members requiring support.'),
-    major_milestones: z.array(z.string()).describe('Specific life events with dates and impact on financial/insurance decisions (e.g., career changes, relocations, health events).')
+
   }),
   financial_profile: z.object({
-    income_stability: z.string().describe('Detailed assessment of income sources, job security, and future earning potential.'),
+    income_profile: z.string().describe('Detailed financial assessment including income range, sources of income, job security, career progression, and household earnings potential.'),
     risk_appetite: z.string().describe('Specific risk tolerance with examples of past financial decisions and investment choices.'),
-    assets: z.array(z.string()).describe('Comprehensive list of assets with specific details (e.g., home value, investment types, inheritance expectations).'),
-    debt: z.array(z.string()).describe('Detailed breakdown of current debts including amounts, terms, and impact on financial planning.')
+    financial_holdings: z.array(z.string()).describe('Comprehensive breakdown of financial position including assets (e.g., home value, investments, inheritance expectations) and liabilities (e.g., debts, loans, payment obligations).')
   }),
-  experiences_and_health: z.object({
-    past_experiences: z.string().describe('Detailed narrative of specific insurance interactions, claims history, and how these shaped current attitudes.'),
-    health_status: z.string().describe('Comprehensive health profile including specific conditions, medications, lifestyle factors, and preventive care habits.'),
-    family_health_history: z.string().describe('Detailed medical history across generations, including specific conditions, age of onset, and preventive measures taken.')
+  experiences: z.object({
+    core_values: z.array(z.string()).describe('Deep-rooted beliefs and principles that drive major life decisions, shaped by personal experiences."'),
+    insurance_history: z.string().describe('Detailed narrative of insurance experiences including past interactions, claims history, trust level based on personal/family experiences, and how cultural factors shape their view of the industry.'),
+    medical_background: z.string().describe('Comprehensive health profile including personal conditions, medications, lifestyle factors, preventive care habits, and detailed family medical history across generations with age of onset patterns.')
   }),
-  values_and_mindset: z.object({
-    core_values: z.array(z.string()).describe('Deep-rooted beliefs and principles that drive major life decisions, shaped by personal experiences.'),
-    worldview: z.string().describe('Complex perspective on life incorporating cultural background, personal experiences, and future outlook.'),
-    trust_in_insurance: z.string().describe('Nuanced view of insurance industry based on personal/family experiences, cultural factors, and specific company interactions.')
-  })
+  summary: z.string().describe('A very concise summary of the persona. Limit to 3-4 words.')
 });
 
 const PersonasResponseSchema = z.object({
@@ -74,7 +65,7 @@ export async function POST(request: Request) {
         });
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o-2024-08-06",
+          model: "gpt-4o",
           messages: [
             {
               role: "system",
@@ -83,17 +74,11 @@ export async function POST(request: Request) {
               
               Guidelines for creating authentic personas:
               - Create rich backstories with specific details about life experiences
-              - Include complex health histories with multiple conditions and family patterns
-              - Detail specific financial situations including exact figures and multiple income sources
-              - Describe precise insurance experiences with specific companies, claim amounts, and outcomes
-              - Include cultural and personal values that shape their decision-making
-              - **Add personality quirks and specific habits that make them feel real**
-              - Consider how their past experiences shape their current attitudes
-              - Include specific regional and cultural influences on their perspectives
+              - *Deeply consider how their demographics, financial profile, and past experiences shape their attitudes towards insurance*
+              - Add personality quirks and specific habits that make them feel real**
               
-              Each persona should feel like a real person you might meet, with unique challenges, 
-              aspirations, and complexities. Avoid generic descriptions and instead provide specific, 
-              memorable details that bring each persona to life.
+              Each persona should feel like a real person you might meet, with unique complexities and outlooks on life.
+              Avoid generic descriptions and instead provide specific, memorable details that bring each persona to life.
               
               You must return exactly 3 personas, each with distinctly different backgrounds, life stages, 
               and attitudes toward insurance.`

@@ -57,12 +57,9 @@ const Scene = dynamic(() => import('@/app/components/Scene'), {
   )
 });
 
-// Define the existing personas array
-const existingPersonas = [
+// Define UI templates for our three cards
+const personaTemplates = [
   {
-    id: 'Zayne',
-    name: 'The Artist',
-    description: 'Creative, design-focused buyers',
     gradient: 'from-violet-400/20 via-purple-400/10 to-fuchsia-400/20',
     hover: 'hover:from-violet-400/30 hover:to-fuchsia-400/30',
     border: 'border-violet-300/20',
@@ -71,9 +68,6 @@ const existingPersonas = [
     colorId: 0
   },
   {
-    id: 'Isla',
-    name: 'The Lifestyle Owner',
-    description: 'Status-conscious luxury buyers',
     gradient: 'from-blue-400/20 via-cyan-400/10 to-sky-400/20',
     hover: 'hover:from-blue-400/30 hover:to-sky-400/30',
     border: 'border-blue-300/20',
@@ -82,9 +76,6 @@ const existingPersonas = [
     colorId: 1
   },
   {
-    id: 'Sloane',
-    name: 'The Laggard Buyer',
-    description: 'Traditional solution adopters',
     gradient: 'from-amber-400/20 via-orange-400/10 to-yellow-400/20',
     hover: 'hover:from-amber-400/30 hover:to-yellow-400/30',
     border: 'border-amber-300/20',
@@ -100,7 +91,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [showWelcomeCard, setShowWelcomeCard] = useState(true);
   const [userInfo, setUserInfo] = useState<{ company: string; services: string } | null>(null);
-  const [personas, setPersonas] = useState(existingPersonas);
+  const [personas, setPersonas] = useState<any[]>([]);
   const router = useRouter();
 
   // Clear localStorage and reset state on page load
@@ -121,8 +112,6 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      console.log('Sending request with data:', data);
-
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
@@ -134,18 +123,26 @@ export default function Home() {
       const responseData = await response.json();
       
       if (!response.ok) {
-        console.error('Server error:', responseData);
         throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
       }
 
       console.log('Server response:', responseData);
-      const personasData = responseData;
-      console.log('Generated Personas:', personasData);
+
+      // Store full persona data in localStorage
+      localStorage.setItem('generatedPersonas', JSON.stringify(responseData.personas));
+
+      // Map the personas to our UI structure using templates
+      const uiPersonas = responseData.personas.map((persona: any, index: number) => ({
+        id: index,
+        name: persona.demographics.name,
+        description: persona.summary,
+        ...personaTemplates[index] // Spread the UI template properties
+      }));
+
+      setPersonas(uiPersonas);
+      
     } catch (error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
+      console.error('Error details:', error);
     } finally {
       setIsLoading(false);
     }
