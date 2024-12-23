@@ -101,9 +101,9 @@ export default function Home() {
     setUserInfo(null);
   }, []); // Empty dependency array means this runs once on mount
 
-  const handleCardClick = (personaId: string) => {
+  const handleCardClick = (id: number) => {
     setIsLoading(true);
-    router.push(`/training/${personaId}`);
+    router.push(`/training/persona${id + 1}`);
   };
 
   const handleWelcomeSubmit = async (data: { company: string; services: string }) => {
@@ -128,15 +128,23 @@ export default function Home() {
 
       console.log('Server response:', responseData);
 
-      // Store full persona data in localStorage
-      localStorage.setItem('generatedPersonas', JSON.stringify(responseData.personas));
+      // Store company info
+      localStorage.setItem('companyInfo', JSON.stringify({
+        name: data.company,
+        services: data.services
+      }));
+
+      // Store individual personas
+      responseData.personas.forEach((persona: any, index: number) => {
+        localStorage.setItem(`persona${index + 1}`, JSON.stringify(persona));
+      });
 
       // Map the personas to our UI structure using templates
       const uiPersonas = responseData.personas.map((persona: any, index: number) => ({
         id: index,
         name: persona.demographics.name,
-        description: persona.summary,
-        ...personaTemplates[index] // Spread the UI template properties
+        description: persona.experiences.core_values.join(' • '),
+        ...personaTemplates[index]
       }));
 
       setPersonas(uiPersonas);
@@ -220,7 +228,7 @@ export default function Home() {
               {personas.map((persona, index) => (
                 <div 
                   key={persona.id} 
-                  onClick={() => handleCardClick(persona.id)}
+                  onClick={() => handleCardClick(index)}
                   className="block w-full no-underline cursor-pointer"
                 >
                   <motion.div

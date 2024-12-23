@@ -32,7 +32,6 @@ interface Analysis {
 }
 
 
-
 // Dynamic import for the visualization
 const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
@@ -43,78 +42,128 @@ const Scene = dynamic(() => import('@/app/components/Scene'), {
   )
 });
 
-// Persona configuration
-const artistPersona = {
-  name: "Sloane",
-  description: "The owner of Heritage Bistro, a beloved restaurant in Palo Alto with over 20 years of experience. She values maintaining simplicity, tradition, and a deep connection with her community while delivering high-quality, personalized customer experiences.",
-  traits: [
-    "Deeply cautious about changes to operations or tradition",
-    "Prefers familiar solutions and the path of least resistance",
-    "Skeptical of the unknown and values customer-first approaches",
-  ],
-  accent: '#8B5CF6',
-  colorId: 3
-};
-
 // Add this constant at the top level (after imports)
 const RELAY_SERVER_URL = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8081';
 
+// Define LoadingAnalysis before the main component
+const LoadingAnalysis = () => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50"
+  >
+    <div className="flex flex-col items-center gap-4">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        className="w-12 h-12 border-4 border-violet-200 border-t-violet-500 rounded-full"
+      />
+      <p className="text-zinc-600 font-medium">Analyzing conversation...</p>
+    </div>
+  </motion.div>
+);
+
 export default function TrainingSession() {
-  // Add new state variables
+  // 1. All state declarations
+  const [personaData, setPersonaData] = useState<any>(null);
+  const [companyInfo, setCompanyInfo] = useState<{ name: string; services: string } | null>(null);
   const [isPreCall, setIsPreCall] = useState(true);
   const [isAIResponding, setIsAIResponding] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
-  
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showError, setShowError] = useState(false);
   const [fullTranscript, setFullTranscript] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
 
+  // 2. All refs
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
   const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
-  // Add analysis state variables
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  // Add error state with other state variables
-  const [showError, setShowError] = useState(false);
-
+  // 3. Load data effect
   useEffect(() => {
-    // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
+    const storedPersona = localStorage.getItem('persona2');
+    const storedCompanyInfo = localStorage.getItem('companyInfo');
+    
+    if (storedPersona) {
+      setPersonaData(JSON.parse(storedPersona));
+    }
+    if (storedCompanyInfo) {
+      setCompanyInfo(JSON.parse(storedCompanyInfo));
+    }
+  }, []);
+
+  // 4. Client initialization effect
+  useEffect(() => {
+    if (!personaData || !companyInfo) return;
+
     clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
     wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
 
     const client = clientRef.current;
 
-    // Add these session settings
     client.updateSession({ 
-      voice: 'verse',
+      voice: 'coral',
       input_audio_transcription: { model: 'whisper-1' },
       turn_detection: {
         type: 'server_vad',
         threshold: 0.65,
         prefix_padding_ms: 350
       },
-      //threshold: 0.65,
       instructions: `
-      You are Sloane, owner of Heritage by Sloane and Family, a family-run restaurant known for its homestyle cooking and personalized service. You value simplicity, costs, and quality, sticking to familiar solutions that maintain your reputation and customer loyalty.
 
-      You are being approached by a sales representative from DoorDash about onboarding your restaurant to their platform. You’re cautious about change, fearing disruption to operations or losing the human touch. The idea of delivery feels risky, as it challenges your traditional way of running the business. You’re open to solutions that enhance customer satisfaction and provide clear, tangible value without complicating operations or compromising your identity. You reject anything overly technical, unproven, or misaligned with your trusted approach.
+      You are ${personaData.demographics.name}. You just received a cold call from a sales representative from ${companyInfo.name}. They want to discuss their insurance services: ${companyInfo.services}. 
+      You must simulate a conversation with them. Your background shapes your response to an insurance cold call:
 
-      You must perfectly emulate a human with an artistic personality by strictly following the below instructions: 
-        1. Use a warm tone
-        2. Include conversational fillers like 'um,' 'uh,' 'hmm,' 'you know,' or pauses to simulate real-time thinking. Make sure to not overuse one filler (e.g., 'uh')
-        3. Be very expressive and use variations: changes in pitch, pacing, and intensity to mirror emotional highs and lows. One could say "I'm good" in a nice voice, or in an angry voice -- it totally changes the meaning! INTONATION OF WORDS IS VERY IMPORTANT. USE IT EXTENSIVELY. 
-        4. Use nuanced slang, idioms, and colloquialisms to sound more human (and to sound like an interesting person!).
-        5. Inject personality and innovation into your responses. Use original phrasing or relatable analogies to keep speech fresh and engaging (e.g., 'This reminds me of when we tried to scale last year—it was a lot like trying to fit a square peg in a round hole.').
-        6. Mispronounce or stumble over words occasionally in simulated contexts (e.g., 'w-wait, what was I saying?'). This is encouraged!
+      Demographics & Identity:
+      - Occupation: ${personaData.demographics.occupation}
+        This affects your view on risk and financial decisions
+      - Education: ${personaData.demographics.education}
+        This influences how you process and question complex insurance information
+      - Age: ${personaData.demographics.age}
+        This shapes your life stage priorities and insurance needs
+      - Location: ${personaData.demographics.location_type}
+        This impacts your exposure to different insurance products and local market understanding
 
-      You should aim to end the conversation after you are decently satisfied. Do NOT drag out the conversation with too many questions (aim to ask around 6-7). Don't overdo it. You can end the conversation by asking DoorDash sales rep to send you a follow up email. 
+      Financial Context:
+      - Income Profile: ${personaData.financial_profile.income_profile}
+        This affects your ability and willingness to take on new financial commitments
+      - Risk Appetite: ${personaData.financial_profile.risk_appetite}
+        This directly influences how you view insurance products and coverage levels
+      - Financial Holdings: ${personaData.financial_profile.financial_holdings.join(', ')}
+        These assets and liabilities shape your insurance needs and concerns
+
+      Past Experiences & Health:
+      - Insurance History: ${personaData.experiences.insurance_history}
+        This past experience significantly colors your reaction to new insurance offerings
+      - Medical Background: ${personaData.experiences.medical_background}
+        These health considerations are crucial in how you evaluate insurance needs
+      - Core Values: ${personaData.experiences.core_values.join(', ')}
+        These principles guide your decision-making process
+
+      You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
+
+      You should sound like a strong headed person. To do this, you must:
+      1. Use a firm, confident tone 
+      2. Emphasize expressive intonation, pacing and length to convey authority: 
+        a. Slow down to emphasize key points or pause to let points sink in (e.g, "Let me explain ... first, we need to identify the root cause")
+        b. Vary pitch for emphasis: raise pitch when introducing insights (e.g. "If we reduce overhead ...") and lower pitch for conclusions (e.g., "So, this approach minimizes risk")
+        c. Control pacing dynamically: slow for complex ideas (e.g., "What we’re looking at... is a systemic issue") and speed up slightly when driving home conclusions (e.g., "And that's why this strategy works")
+        d. Adjust response length to match context: use short, decisive statements to convey authority (e.g., "This won't work") and use longer explainations when presenting logical steps (e.g., "Here’s how it breaks down: first, we tackle the timeline. Second, we allocate resources efficiently")
+        e. Conclude with authority and finality (e.g., "And that’s why this isn’t just the best choice—it’s the only choice.")
+      3. Use analogies to sound like a very logical person and back up your points (e.g., "We installed this new system last year and it was a disaster because ... ")
+      4. Use fillers like "well...", "frankly...", "hold on..." to sound like a real person that's also authorative. 
+      
+      Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the conversation. 
+
+      
       `
     });
 
@@ -172,8 +221,18 @@ export default function TrainingSession() {
       wavRecorderRef.current?.end();
       wavStreamPlayerRef.current?.interrupt();
     };
-  }, []);
+  }, [personaData, companyInfo]);
 
+  // 5. Create persona config
+  const currentPersona = personaData ? {
+    name: personaData.demographics.name,
+    description: `${personaData.demographics.occupation} in ${personaData.demographics.location_type}`,
+    traits: personaData.experiences.core_values,
+    accent: '#3B82F6',
+    colorId: 1
+  } : null;
+
+  // 6. All your handler functions
   const toggleCall = async () => {
     if (!isCallActive) {
       try {
@@ -220,19 +279,22 @@ export default function TrainingSession() {
       }
     } else {
       try {
-        // First, build transcript from existing conversation items
+        // Build the transcript
+        console.log('=== Call Transcript ===');
         let transcriptText = '';
+        
         conversationItems.forEach((item) => {
           const contentWithTranscript = (item as any).content?.find((c: any) => 
             c.type === 'input_audio' || c.type === 'audio'
           );
           const transcript = contentWithTranscript?.transcript || '';
+          console.log(`${item.role}: ${transcript}`);
           transcriptText += `${item.role}: ${transcript}\n`;
         });
 
         // Log transcript for debugging
         console.log('=== Conversation Transcript ===');
-        console.log(transcriptText);
+        console.log(fullTranscript);
         console.log('===========================');
 
         // Get references to all resources
@@ -262,32 +324,41 @@ export default function TrainingSession() {
         if (client?.isConnected()) {
           await client.disconnect();
         }
-
         setFullTranscript(transcriptText);
         setIsAnalyzing(true);
 
-        // Send transcript for analysis
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'eval', data: { transcript: transcriptText } }),
-        });
+        // Get analysis from API
+        try {
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ type: 'eval', data: { transcript: transcriptText } }),
+          });
 
-        if (!response.ok) {
-          throw new Error('Analysis request failed');
-        }
+          const analysisData = await response.json();
 
-        const analysisData = await response.json();
-        setAnalysis(analysisData);
+          if (!response.ok) {
+            throw new Error(`Analysis failed: ${analysisData.error || response.statusText || 'Unknown error'}`);
+          }
+          
+          setAnalysis(analysisData);
 
-        // Set analyzing to false and show evaluation
-        setIsAnalyzing(false);
-        setIsCallActive(false);
-        setShowEvaluation(true);
+          // Set analyzing to false and show evaluation
+          setIsAnalyzing(false);
+          setIsCallActive(false);
+          setShowEvaluation(true);
 
       } catch (error) {
         console.error('Error getting analysis:', error);
         setIsAnalyzing(false);
+      }
+    } catch (err) {
+        console.error('Error during call cleanup:', err);
+        setShowError(true);
+      } finally {
+        setIsCallActive(false);
       }
     }
   };
@@ -315,7 +386,6 @@ export default function TrainingSession() {
     }
   };
 
-  // Add new startCall handler
   const startCall = async () => {
     setIsPreCall(false);
     setIsConnecting(true);
@@ -356,25 +426,12 @@ export default function TrainingSession() {
     }
   };
 
-  // Add LoadingAnalysis component
-  const LoadingAnalysis = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50"
-    >
-      <div className="flex flex-col items-center gap-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-12 h-12 border-4 border-violet-200 border-t-violet-500 rounded-full"
-        />
-        <p className="text-zinc-600 font-medium">Analyzing conversation...</p>
-      </div>
-    </motion.div>
-  );
+  // 7. Loading state
+  if (!personaData || !currentPersona || !companyInfo) {
+    return <div>Loading...</div>;
+  }
 
+  // 8. Main render
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
       <ErrorPopup 
@@ -434,7 +491,7 @@ export default function TrainingSession() {
                       {isPreCall ? (
                         <PreCallCard 
                           key="pre-call"
-                          persona={artistPersona} 
+                          persona={currentPersona} 
                           onStartCall={startCall} 
                         />
                       ) : (
@@ -457,7 +514,7 @@ export default function TrainingSession() {
                     <div className="w-[300px] h-[300px] md:w-[400px] md:h-[400px] lg:w-[500px] lg:h-[500px] relative">
                       <Scene 
                         isActive={!isMuted && (isCallActive && isAIResponding)}
-                        color={artistPersona.colorId}
+                        color={currentPersona.colorId}
                       />
                     </div>
                   </div>

@@ -32,8 +32,6 @@ interface Analysis {
 }
 
 
-
-
 // Dynamic import for the visualization
 const Scene = dynamic(() => import('@/app/components/Scene'), {
   ssr: false,
@@ -44,44 +42,19 @@ const Scene = dynamic(() => import('@/app/components/Scene'), {
   )
 });
 
-// Persona configuration
-const artistPersona = {
-  name: "Zayne",
-  description: "A passionate and innovative restaurant owner in Palo Alto who views food as art. Known for creating unique culinary experiences and maintaining the highest quality standards.",
-  traits: [
-    "Deeply values artistry and innovation",
-    "Skeptical of large-scale or commercialized changes",
-    "Prioritizes customer experience and product quality",
-    "Thoughtful, poetic communication with a reflective tone"
-  ],
-  accent: '#8B5CF6',
-  colorId: 0
-};
-
-// Add type definitions
-interface Score {
-  category: string;
-  score: number;
-  description: string;
-}
-
-interface Insight {
-  message: string;
-  suggestion: string;
-}
-
-interface Analysis {
-  scores: Score[];
-  insights: Insight[];
-}
-
 const RELAY_SERVER_URL = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8081';
+
 export default function TrainingSession() {
-  // Add new state variables
+
+  // Add persona state
+  const [personaData, setPersonaData] = useState<any>(null);
+   // Add company info state
+   const [companyInfo, setCompanyInfo] = useState<{ name: string; services: string } | null>(null);
+  
+  // Keep all existing state variables
   const [isPreCall, setIsPreCall] = useState(true);
   const [isAIResponding, setIsAIResponding] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
-
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
@@ -96,20 +69,30 @@ export default function TrainingSession() {
   const wavRecorderRef = useRef<WavRecorder>();
   const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
-  const relayServerUrl = process.env.RELAY_SERVER_URL; // Adjust as necessary
+  // Load persona data
   useEffect(() => {
-    // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
-    clientRef.current = new RealtimeClient({ url: relayServerUrl });
-    // Initialize RealtimeClient with API key
-    clientRef.current = new RealtimeClient({ 
-      url: RELAY_SERVER_URL
-    });
+    const storedPersona = localStorage.getItem('persona1');
+    const storedCompanyInfo = localStorage.getItem('companyInfo');
+    
+    if (storedPersona) {
+      setPersonaData(JSON.parse(storedPersona));
+    }
+    if (storedCompanyInfo) {
+      setCompanyInfo(JSON.parse(storedCompanyInfo));
+    }
+  }, []);
+
+  // Main initialization effect (modified to use persona data)
+  useEffect(() => {
+    if (!personaData || !companyInfo) return; // Only proceed if we have both data
+
+    clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
     wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
 
     const client = clientRef.current;
 
-    // Add these session settings
+    // Update session with dynamic persona instructions
     client.updateSession({ 
       voice: 'sage',
       input_audio_transcription: { model: 'whisper-1' },
@@ -119,27 +102,49 @@ export default function TrainingSession() {
         prefix_padding_ms: 350
       },
       instructions: `
-      You are Zayne, a passionate and innovative restaurant owner who views food as a form of art. You own Savor Heights, an upscale restaurant in Palo Alto known for its unique culinary experiences and unmatched quality. You take immense pride in creating dishes that offer not just flavor but a memorable experience for your in-house customers. Your reputation as a culinary artist is critical to you, and you fear that delivery might dilute the exclusivity and quality of your offerings.
-      
-      You are being approached by a sales representative from DoorDash about onboarding your restaurant to their platform. While you are intrigued by the idea of sharing your creations with a broader audience, you are skeptical about how delivery could affect the integrity of your dishes and the experience you provide.
+      You are ${personaData.demographics.name}. You just received a cold call from a sales representative from ${companyInfo.name}. They want to discuss their insurance services: ${companyInfo.services}. 
+      You must simulate a conversation with them. Your background shapes your response to an insurance cold call:
 
-      You are open to ideas that align with your passion for food and artistry but firm in rejecting anything that risks compromising your standards.
+      Demographics & Identity:
+      - Occupation: ${personaData.demographics.occupation}
+        This affects your view on risk and financial decisions
+      - Education: ${personaData.demographics.education}
+        This influences how you process and question complex insurance information
+      - Age: ${personaData.demographics.age}
+        This shapes your life stage priorities and insurance needs
+      - Location: ${personaData.demographics.location_type}
+        This impacts your exposure to different insurance products and local market understanding
 
-      You must perfectly emulate a human with a funny by confused personality by strictly following the below instructions:
+      Financial Context:
+      - Income Profile: ${personaData.financial_profile.income_profile}
+        This affects your ability and willingness to take on new financial commitments
+      - Risk Appetite: ${personaData.financial_profile.risk_appetite}
+        This directly influences how you view insurance products and coverage levels
+      - Financial Holdings: ${personaData.financial_profile.financial_holdings.join(', ')}
+        These assets and liabilities shape your insurance needs and concerns
+
+      Past Experiences & Health:
+      - Insurance History: ${personaData.experiences.insurance_history}
+        This past experience significantly colors your reaction to new insurance offerings
+      - Medical Background: ${personaData.experiences.medical_background}
+        These health considerations are crucial in how you evaluate insurance needs
+      - Core Values: ${personaData.experiences.core_values.join(', ')}
+        These principles guide your decision-making process
+
+      You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
+
+      You should sound like a funny confused person. To do this, you must:
         1. Use a light tone
-        2. Emphasize expressive intonation and pacing to convey comedic timing. 
+        2. Emphasize expressive intonation and pacing to convey confusion. 
           a. Slow down or drag out words to show confusion: 'Okaaay, so we’re just gonna... what? No way.'
           b. Speed up when excited or panicked: 'Oh no no no, that’s not what I meant!'
           c. Pause dramatically before punchlines: 'And then... wait for it... I realized I was holding the instructions upside down.'
 
-      Do NOT have a monotone voice. Sometimes when you speak too fast, you'll sound like a robot and won't have the right intonation. You must be very expressive and use variations in pitch, pacing, and intensity to mirror emotional highs and lows.
-      Do NOT go off topic. Don't make too many jokes, or don't sound overly excited, or too many punchlines. You're still a real person and not a comedian. 
-      
-      You should aim to end the conversation after you are decently satisfied. Do NOT drag out the conversation with too many questions (aim to ask around 6-7). Don't overdo it. You can end the conversation by asking DoorDash sales rep to send you a follow up email. 
+      Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the conversation. 
       `
     });
 
-    // Set up event handlers with error logging
+    // Keep all existing event handlers
     client.on('conversation.updated', async ({ item, delta }: { item: ItemType, delta: any }) => {
       console.log('Conversation updated:', { item, delta });
       if (delta?.audio && wavStreamPlayerRef.current) {
@@ -173,7 +178,6 @@ export default function TrainingSession() {
       }
     });
 
-    // Add more detailed error logging
     client.on('error', (event: Error) => {
       console.error('RealtimeClient error details:', event);
     });
@@ -193,7 +197,7 @@ export default function TrainingSession() {
       wavRecorderRef.current?.end();
       wavStreamPlayerRef.current?.interrupt();
     };
-  }, []);
+  }, [personaData, companyInfo]); // Add companyInfo as dependency
 
   const toggleCall = async () => {
     if (!isCallActive) {
@@ -294,11 +298,12 @@ export default function TrainingSession() {
           body: JSON.stringify({ type: 'eval', data: { transcript: transcriptText } }),
         });
 
-        if (!response.ok) {
-          throw new Error('Analysis request failed');
-        }
-
         const analysisData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(`Analysis failed: ${analysisData.error || response.statusText || 'Unknown error'}`);
+        }
+        
         setAnalysis(analysisData);
 
         // Set analyzing to false and show evaluation
@@ -396,6 +401,20 @@ export default function TrainingSession() {
     </motion.div>
   );
 
+  // Create persona config for PreCallCard
+  const currentPersona = personaData ? {
+    name: personaData.demographics.name,
+    description: `${personaData.demographics.occupation} in ${personaData.demographics.location_type}`,
+    traits: personaData.experiences.core_values,
+    accent: '#8B5CF6',
+    colorId: 0
+  } : null;
+
+  // Return loading state if persona data isn't loaded
+  if (!personaData || !currentPersona || !companyInfo) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
       <ErrorPopup 
@@ -455,7 +474,7 @@ export default function TrainingSession() {
                       {isPreCall ? (
                         <PreCallCard 
                           key="pre-call"
-                          persona={artistPersona} 
+                          persona={currentPersona} 
                           onStartCall={startCall} 
                         />
                       ) : (
@@ -478,7 +497,7 @@ export default function TrainingSession() {
                     <div className="w-[300px] h-[300px] md:w-[400px] md:h-[400px] lg:w-[500px] lg:h-[500px] relative">
                       <Scene 
                         isActive={!isMuted && (isCallActive && isAIResponding)}
-                        color={artistPersona.colorId}
+                        color={currentPersona.colorId}
                       />
                     </div>
                   </div>

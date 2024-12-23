@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { NextResponse } from 'next/server';
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
 // Define our schema
 const PersonaSchema = z.object({
   demographics: z.object({
@@ -33,8 +37,17 @@ const PersonasResponseSchema = z.object({
   personas: z.array(PersonaSchema)
 });
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+// New evaluation schema without length constraints
+const evaluationSchema = z.object({
+  scores: z.array(z.object({
+    category: z.string(),
+    score: z.number(),
+    description: z.string()
+  })),
+  insights: z.array(z.object({
+    message: z.string(),
+    suggestion: z.string()
+  }))
 });
 
 export async function POST(request: Request) {
@@ -120,52 +133,67 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
-    } else if (type === 'eval') {
-      systemPrompt = `You are an expert sales coach specializing in restaurant partnerships and food delivery services. 
-      You're analyzing a conversation between a DoorDash sales representative and a restaurant owner.
+    } 
+    else if (type === 'eval') {
+      const systemPrompt = `You are an expert sales coach specializing in insurance sales and customer relationships. 
+      You're analyzing a conversation between an insurance sales representative and a potential customer.
       
-      Provide analysis in the following JSON structure:
-      {
-        "scores": [
-          {
-            "category": "Understanding & Personalization",
-            "score": <number 0-100>,
-            "description": "<specific and nuanced but concise feedback on how well the sales rep understood the restaurant's needs and personalized the offer>"
-          },
-          {
-            "category": "Objection Handling & Trust",
-            "score": <number 0-100>,
-            "description": "<specific and nuanced but concise feedback on how well the sales rep handled objections and built trust>"
-          },
-          {
-            "category": "Value Communication",
-            "score": <number 0-100>,
-            "description": "<specific and nuanced but concise feedback on how well the sales rep communicated the value of DoorDash's services>"
+      Analyze the conversation focusing on EXACTLY these 3 categories (no more, no less):
+      1. Understanding & Personalization: How well did the rep understand and personalize their approach?
+      2. Objection Handling & Trust: How effectively did they handle concerns and build trust?
+      3. Value Communication: How clearly did they communicate the insurance product value?
+
+      For each category, provide:
+      - A score from 0-100
+      - Specific, actionable feedback
+      
+      Then extract EXACTLY 3 key moments from the conversation (no more, no less), each with:
+      - A specific quote from the conversation
+      - An actionable suggestion for improvement`;
+
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `Here's the transcript where the sales rep (ALWAYS'user') is trying to sell insurance products to a potential customer (ALWAYS'assistant'): ${data.transcript}` }
+          ],
+          response_format: { 
+            type: "json_schema",
+            json_schema: {
+              name: "EvaluationResponse",
+              schema: zodToJsonSchema(evaluationSchema),
+              strict: true
+            }
           }
-        ],
-        "insights": [
-          {
-            "message": "<actual quote from conversation>",
-            "suggestion": "<specific, actionable improvement suggestion>"
-          },
-          // 2 more insights following same structure (so overall is strictly 3)
-        ]
-      }`;
-      userPrompt = `Here's the transcript where the sales rep ('user') is trying to onboard a restaurant ('assistant') to DoorDash: ${data.transcript}`;
-    } else {
-      console.error('Invalid request type:', type);
+        });
+
+        if (!completion?.choices?.[0]?.message?.content) {
+          throw new Error('Invalid response from OpenAI');
+        }
+
+        // Validate the response against our schema
+        const parsedResponse = evaluationSchema.parse(JSON.parse(completion.choices[0].message.content));
+        return NextResponse.json(parsedResponse);
+
+      } catch (error) {
+        console.error('Evaluation Error:', error);
+        return NextResponse.json(
+          { error: 'Failed to analyze conversation', details: error.message },
+          { status: 500 }
+        );
+      }
+    } 
+    else {
       return NextResponse.json(
         { error: 'Invalid request type' },
         { status: 400 }
       );
     }
   } catch (error) {
-    console.error('General API Error:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to process request',
-        details: error instanceof Error ? error.message : 'Unknown error occurred'
-      },
+      { error: 'Failed to process request', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

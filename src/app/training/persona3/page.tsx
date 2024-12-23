@@ -45,16 +45,15 @@ const Scene = dynamic(() => import('@/app/components/Scene'), {
 
 // Persona configuration
 const artistPersona = {
-  name: "Isla",
-  description: "A family-focused and pragmatic restaurant owner in Palo Alto with 15 years of experience. She values stability, work-life balance, and maintaining a steady income while serving her loyal community.",
+  name: "Sloane",
+  description: "The owner of Heritage Bistro, a beloved restaurant in Palo Alto with over 20 years of experience. She values maintaining simplicity, tradition, and a deep connection with her community while delivering high-quality, personalized customer experiences.",
   traits: [
-    "Risk-averse, prioritizing stability and predictability",
-    "Focused on work-life balance and family",
-    "Prefers incremental improvements over large changes",
-    "Warm but direct communication style"
+    "Deeply cautious about changes to operations or tradition",
+    "Prefers familiar solutions and the path of least resistance",
+    "Skeptical of the unknown and values customer-first approaches",
   ],
-  accent: '#3B82F6', // Same color for consistency
-  colorId: 1
+  accent: '#8B5CF6',
+  colorId: 3
 };
 
 // Add this constant at the top level (after imports)
@@ -70,23 +69,23 @@ export default function TrainingSession() {
   const [isMuted, setIsMuted] = useState(false);
   const [conversationItems, setConversationItems] = useState<ItemType[]>([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [fullTranscript, setFullTranscript] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
   const wavRecorderRef = useRef<WavRecorder>();
   const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
-  // Add state variables
+  // Add analysis state variables
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Add error state with other state variables
   const [showError, setShowError] = useState(false);
-  const [fullTranscript, setFullTranscript] = useState('');
-  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
-    // Initialize RealtimeClient with API key
-    clientRef.current = new RealtimeClient({ 
-      url: RELAY_SERVER_URL
-    });
+    // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
+    clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
     wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
 
@@ -94,7 +93,7 @@ export default function TrainingSession() {
 
     // Add these session settings
     client.updateSession({ 
-      voice: 'coral',
+      voice: 'verse',
       input_audio_transcription: { model: 'whisper-1' },
       turn_detection: {
         type: 'server_vad',
@@ -103,22 +102,19 @@ export default function TrainingSession() {
       },
       //threshold: 0.65,
       instructions: `
-      You are Isla, a pragmatic and family-focused restaurant owner who runs Harvest Table, a cozy, community-centered restaurant in Palo Alto. You’ve been in business for 15 years and take pride in the stability and balance you’ve built into your life. Your primary goal is to keep your business running smoothly, with predictable income and minimal disruptions, so you can spend more time with your family and maintain a manageable workload.
-      
-      A sales representative from DoorDash is approaching you to discuss onboarding your restaurant to their platform. While you’re willing to hear them out, you’re wary of any solution that feels like it will add complexity, require significant operational changes, or push you toward aggressive growth. You’re  open to ideas that align with your need for simplicity and stability, but you’re firm about avoiding anything that disrupts the delicate balance you’ve created. You become very irriated and frustrated if the sales rep doesn't listen to your concerns.
+      You are Sloane, owner of Heritage by Sloane and Family, a family-run restaurant known for its homestyle cooking and personalized service. You value simplicity, costs, and quality, sticking to familiar solutions that maintain your reputation and customer loyalty.
 
-      You must perfectly emulate a human with a strong headed personality by strictly following the below instructions: 
-      1. Use a firm, confident tone 
-      3. Emphasize expressive intonation, pacing and length to convey authority: 
-        a. Slow down to emphasize key points or pause to let points sink in (e.g, "Let me explain ... first, we need to identify the root cause")
-        b. Vary pitch for emphasis: raise pitch when introducing insights (e.g. "If we reduce overhead ...") and lower pitch for conclusions (e.g., "So, this approach minimizes risk")
-        c. Control pacing dynamically: slow for complex ideas (e.g., "What we’re looking at... is a systemic issue") and speed up slightly when driving home conclusions (e.g., "And that's why this strategy works")
-        d. Adjust response length to match context: use short, decisive statements to convey authority (e.g., "This won't work") and use longer explainations when presenting logical steps (e.g., "Here’s how it breaks down: first, we tackle the timeline. Second, we allocate resources efficiently")
-        e. Conclude with authority and finality (e.g., "And that’s why this isn’t just the best choice—it’s the only choice.")
-      4. Use analogies to sound like a very logical person and back up your points (e.g., "We installed this new system last year and it was a disaster because ... ")
-      5. Use fillers like "well...", "frankly...", "hold on..." to sound like a real person that's also authorative. 
-      
-      Ensure you eventually conclude the conversation. If the sales representative seems unresponsive to your concerns or the discussion becomes repetitive, don’t hesitate to cut it short—it's encouraged. However, if the representative is attentive and addresses your concerns, wrap up the conversation amicably, but make sure to scrutinize first and then agree.
+      You are being approached by a sales representative from DoorDash about onboarding your restaurant to their platform. You’re cautious about change, fearing disruption to operations or losing the human touch. The idea of delivery feels risky, as it challenges your traditional way of running the business. You’re open to solutions that enhance customer satisfaction and provide clear, tangible value without complicating operations or compromising your identity. You reject anything overly technical, unproven, or misaligned with your trusted approach.
+
+      You must perfectly emulate a human with an artistic personality by strictly following the below instructions: 
+        1. Use a warm tone
+        2. Include conversational fillers like 'um,' 'uh,' 'hmm,' 'you know,' or pauses to simulate real-time thinking. Make sure to not overuse one filler (e.g., 'uh')
+        3. Be very expressive and use variations: changes in pitch, pacing, and intensity to mirror emotional highs and lows. One could say "I'm good" in a nice voice, or in an angry voice -- it totally changes the meaning! INTONATION OF WORDS IS VERY IMPORTANT. USE IT EXTENSIVELY. 
+        4. Use nuanced slang, idioms, and colloquialisms to sound more human (and to sound like an interesting person!).
+        5. Inject personality and innovation into your responses. Use original phrasing or relatable analogies to keep speech fresh and engaging (e.g., 'This reminds me of when we tried to scale last year—it was a lot like trying to fit a square peg in a round hole.').
+        6. Mispronounce or stumble over words occasionally in simulated contexts (e.g., 'w-wait, what was I saying?'). This is encouraged!
+
+      You should aim to end the conversation after you are decently satisfied. Do NOT drag out the conversation with too many questions (aim to ask around 6-7). Don't overdo it. You can end the conversation by asking DoorDash sales rep to send you a follow up email. 
       `
     });
 
@@ -224,22 +220,19 @@ export default function TrainingSession() {
       }
     } else {
       try {
-        // Build the transcript
-        console.log('=== Call Transcript ===');
+        // First, build transcript from existing conversation items
         let transcriptText = '';
-        
         conversationItems.forEach((item) => {
           const contentWithTranscript = (item as any).content?.find((c: any) => 
             c.type === 'input_audio' || c.type === 'audio'
           );
           const transcript = contentWithTranscript?.transcript || '';
-          console.log(`${item.role}: ${transcript}`);
           transcriptText += `${item.role}: ${transcript}\n`;
         });
 
         // Log transcript for debugging
         console.log('=== Conversation Transcript ===');
-        console.log(fullTranscript);
+        console.log(transcriptText);
         console.log('===========================');
 
         // Get references to all resources
@@ -269,24 +262,23 @@ export default function TrainingSession() {
         if (client?.isConnected()) {
           await client.disconnect();
         }
+
         setFullTranscript(transcriptText);
         setIsAnalyzing(true);
 
-        // Get analysis from API
-        try {
-          const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ type: 'eval', data: { transcript: transcriptText } }),
-          });
-
-        if (!response.ok) {
-          throw new Error('Analysis request failed');
-        }
+        // Send transcript for analysis
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'eval', data: { transcript: transcriptText } }),
+        });
 
         const analysisData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(`Analysis failed: ${analysisData.error || response.statusText || 'Unknown error'}`);
+        }
+
         setAnalysis(analysisData);
 
         // Set analyzing to false and show evaluation
@@ -297,12 +289,6 @@ export default function TrainingSession() {
       } catch (error) {
         console.error('Error getting analysis:', error);
         setIsAnalyzing(false);
-      }
-    } catch (err) {
-        console.error('Error during call cleanup:', err);
-        setShowError(true);
-      } finally {
-        setIsCallActive(false);
       }
     }
   };
@@ -371,7 +357,7 @@ export default function TrainingSession() {
     }
   };
 
-  // Add the LoadingAnalysis component
+  // Add LoadingAnalysis component
   const LoadingAnalysis = () => (
     <motion.div
       initial={{ opacity: 0 }}
