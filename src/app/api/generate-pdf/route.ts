@@ -2,7 +2,18 @@ import { jsPDF } from 'jspdf';
 
 export async function POST(request: Request) {
   try {
-    const { analysis, transcript } = await request.json();
+    let data;
+    try {
+      data = await request.json();
+    } catch (parseError) {
+      console.error('Request JSON Parse Error:', parseError);
+      return new Response(JSON.stringify({ error: 'Invalid JSON in request' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { analysis, transcript } = data;
 
     if (!analysis || !transcript) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {

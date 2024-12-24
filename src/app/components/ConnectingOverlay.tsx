@@ -55,7 +55,7 @@ export const ConnectingOverlay = ({ isVisible }: { isVisible: boolean }) => {
               </motion.div>
             </div>
             <p className="text-zinc-600 font-medium text-lg text-center">
-            Calling restuarant owner...
+            Calling potential client...
             </p>
           </div>
         </motion.div>

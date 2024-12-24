@@ -456,7 +456,7 @@ export default function TrainingSession() {
                 <div className="h-full min-h-0 w-full lg:w-[45%] p-6 md:p-12 lg:p-16 flex flex-col">
                   {/* Header */}
                   <div className="flex-none mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
+                    <Link href="/personas" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
                       <ArrowLeft className="w-4 h-4" />
                       Back to personas
                     </Link>

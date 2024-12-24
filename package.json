@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "npm install --legacy-peer-deps && next build",
     "start": "next start",
     "lint": "next lint",
     "relay": "node relay-server/index.js"
   },
   "dependencies": {
+    "@emotion/is-prop-valid": "^1.3.1",
     "@openai/realtime-api-beta": "github:openai/openai-realtime-api-beta",
     "@react-three/fiber": "^9.0.0-beta.1",
     "dotenv": "^16.4.5",
@@ -37,6 +38,5 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  },
-  "type": "module"
+  }
 }

@@ -107,7 +107,7 @@ export const EvaluationScreen = ({ analysis, transcript }: { analysis: Analysis,
   const router = useRouter();
   
   if (!analysis) {
-    router.push('/');
+    router.push('/personas');
     return null;
   }
   // Map the scores with their corresponding icons
@@ -126,7 +126,7 @@ export const EvaluationScreen = ({ analysis, transcript }: { analysis: Analysis,
           className="mb-12"
         >
           <Link 
-            href="/" 
+            href="/personas" 
             className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6"
           >
             <ArrowLeft className="w-4 h-4" />

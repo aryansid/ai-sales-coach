@@ -30,7 +30,7 @@ const PersonaSchema = z.object({
     insurance_history: z.string().describe('Detailed narrative of insurance experiences including past interactions, claims history, trust level based on personal/family experiences, and how cultural factors shape their view of the industry.'),
     medical_background: z.string().describe('Comprehensive health profile including personal conditions, medications, lifestyle factors, preventive care habits, and detailed family medical history across generations with age of onset patterns.')
   }),
-  summary: z.string().describe('A very concise summary of the persona. Limit to 3-4 words.')
+  summary: z.string().describe('A very concise summary of the persona. Limit to STRICTLY 3 words.')
 });
 
 const PersonasResponseSchema = z.object({
@@ -116,20 +116,34 @@ export async function POST(request: Request) {
           throw new Error('Invalid response from OpenAI');
         }
 
-        const result = JSON.parse(completion.choices[0].message.content);
-        const validated = PersonasResponseSchema.parse(result);
-        
-        console.log('GPT Response:', {
-          raw: completion.choices[0].message.content,
-          parsed: validated,
-          usage: completion.usage
-        });
+        try {
+          const result = JSON.parse(completion.choices[0].message.content);
+          const validated = PersonasResponseSchema.parse(result);
+          
+          console.log('GPT Response:', {
+            raw: completion.choices[0].message.content,
+            parsed: validated,
+            usage: completion.usage
+          });
 
-        return NextResponse.json(validated);
-      } catch (openaiError) {
+          return NextResponse.json(validated);
+        } catch (parseError: any) {
+          console.error('JSON Parse Error:', parseError);
+          return NextResponse.json(
+            { 
+              error: 'Failed to parse OpenAI response', 
+              details: parseError?.message || 'Unknown parsing error'
+            },
+            { status: 500 }
+          );
+        }
+      } catch (openaiError: any) {
         console.error('OpenAI API Error:', openaiError);
         return NextResponse.json(
-          { error: 'Failed to generate personas from OpenAI', details: openaiError.message },
+          { 
+            error: 'Failed to generate personas from OpenAI', 
+            details: openaiError?.message || 'Unknown OpenAI error'
+          },
           { status: 500 }
         );
       }
@@ -156,7 +170,7 @@ export async function POST(request: Request) {
           model: "gpt-4o",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: `Here's the transcript where the sales rep (ALWAYS'user') is trying to sell insurance products to a potential customer (ALWAYS'assistant'): ${data.transcript}` }
+            { role: "user", content: `Here's the transcript where the sales rep (ALWAYS 'user') is trying to sell insurance products to a potential customer (ALWAYS'assistant'): ${data.transcript}` }
           ],
           response_format: { 
             type: "json_schema",
@@ -176,10 +190,13 @@ export async function POST(request: Request) {
         const parsedResponse = evaluationSchema.parse(JSON.parse(completion.choices[0].message.content));
         return NextResponse.json(parsedResponse);
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Evaluation Error:', error);
         return NextResponse.json(
-          { error: 'Failed to analyze conversation', details: error.message },
+          { 
+            error: 'Failed to analyze conversation', 
+            details: error?.message || 'Unknown evaluation error' 
+          },
           { status: 500 }
         );
       }
@@ -190,10 +207,13 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Failed to process request', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to process request', 
+        details: error?.message || 'Unknown error' 
+      },
       { status: 500 }
     );
   }
