@@ -7,12 +7,12 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { RealtimeClient } from '@openai/realtime-api-beta';
-import { WavRecorder, WavStreamPlayer } from '@/app/lib/wavtools';
-import { PreCallCard } from '@/app/components/PreCallCard';
-import { ChatInterface } from '@/app/components/ChatInterface';
-import { EvaluationScreen } from '@/app/components/EvaluationScreen';
-import { ErrorPopup } from '@/app/components/ErrorPopup';
-import { ConnectingOverlay } from '@/app/components/ConnectingOverlay';
+import WavTools from '../../../app/lib/wavtools';
+import PreCallCard from '../../../app/components/PreCallCard';
+import ChatInterface from '../../../app/components/ChatInterface';
+import { EvaluationScreen } from '../../../app/components/EvaluationScreen';
+import { ErrorPopup } from '../../../app/components/ErrorPopup';
+import { ConnectingOverlay } from '../../../app/components/ConnectingOverlay';
 
 // Type definitions
 interface Score {
@@ -64,8 +64,8 @@ export default function TrainingSession() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
-  const wavRecorderRef = useRef<WavRecorder>();
-  const wavStreamPlayerRef = useRef<WavStreamPlayer>();
+  const wavRecorderRef = useRef<WavTools>();
+  const wavStreamPlayerRef = useRef<WavTools>();
 
   // Add analysis state variables
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -93,8 +93,8 @@ export default function TrainingSession() {
 
     // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
     clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
-    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
-    wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
+    wavRecorderRef.current = new WavTools({ sampleRate: 24000 });
+    wavStreamPlayerRef.current = new WavTools({ sampleRate: 24000 });
 
     const client = clientRef.current;
 
