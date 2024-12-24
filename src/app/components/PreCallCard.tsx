@@ -10,7 +10,7 @@ interface PreCallCardProps {
   onStartCall: () => void;
 }
 
-export const PreCallCard = ({ persona, onStartCall }: PreCallCardProps) => {
+const PreCallCard = ({ persona, onStartCall }: PreCallCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -48,3 +48,5 @@ export const PreCallCard = ({ persona, onStartCall }: PreCallCardProps) => {
     </motion.div>
   );
 };
+
+export default PreCallCard;

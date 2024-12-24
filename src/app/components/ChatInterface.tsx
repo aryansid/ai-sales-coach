@@ -5,7 +5,7 @@ import { ItemType } from '@openai/realtime-api-beta/dist/lib/client';
 
 type TranscriptionStatus = 'transcribing' | 'completed' | 'inaudible' | 'in_progress';
 
-export const ChatInterface = ({ 
+const ChatInterface = ({ 
   conversationItems,
   isCallActive,
   isMuted,
@@ -176,7 +176,6 @@ export const ChatInterface = ({
   );
 };
 
-
 const TranscribingIndicator = () => (
   <div className="flex items-center gap-2">
     <div className="text-sm text-zinc-500">Transcribing</div>
@@ -199,3 +198,5 @@ const TranscribingIndicator = () => (
     </div>
   </div>
 );
+
+export default ChatInterface;

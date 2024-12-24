@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { MessageCircle, Brain, Shield, Target, Sparkles, LightbulbIcon, ArrowLeft, LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { DownloadButton } from '@/app/components/DownloadButton';
+import { DownloadButton } from './DownloadButton';
 
 // Type definitions
 interface Score {

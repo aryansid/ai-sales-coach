@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Download } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { ErrorPopup } from '@/app/components/ErrorPopup';
+import { ErrorPopup } from './ErrorPopup';
 
 
 // Type definitions

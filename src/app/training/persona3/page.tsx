@@ -7,7 +7,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { RealtimeClient } from '@openai/realtime-api-beta';
-import WavTools from '../../../app/lib/wavtools';
+import { WavRecorder, WavStreamPlayer } from '../../../app/lib/wavtools';
 import PreCallCard from '../../../app/components/PreCallCard';
 import ChatInterface from '../../../app/components/ChatInterface';
 import { EvaluationScreen } from '../../../app/components/EvaluationScreen';
@@ -34,7 +34,7 @@ interface Analysis {
 
 
 // Dynamic import for the visualization
-const Scene = dynamic(() => import('@/app/components/Scene'), {
+const DynamicScene = dynamic(() => import('../../../app/components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center">
@@ -64,8 +64,8 @@ export default function TrainingSession() {
   const [isConnecting, setIsConnecting] = useState(false);
 
   const clientRef = useRef<RealtimeClient>();
-  const wavRecorderRef = useRef<WavTools>();
-  const wavStreamPlayerRef = useRef<WavTools>();
+  const wavRecorderRef = useRef<WavRecorder>();
+  const wavStreamPlayerRef = useRef<WavStreamPlayer>();
 
   // Add analysis state variables
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -93,8 +93,8 @@ export default function TrainingSession() {
 
     // Initialize RealtimeClient, WavRecorder, WavStreamPlayer
     clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
-    wavRecorderRef.current = new WavTools({ sampleRate: 24000 });
-    wavStreamPlayerRef.current = new WavTools({ sampleRate: 24000 });
+    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
+    wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
 
     const client = clientRef.current;
 
@@ -503,7 +503,7 @@ export default function TrainingSession() {
                 <div className="h-full w-full lg:w-[55%] relative flex items-center justify-center">
                   <div className="p-8 md:p-12 lg:p-16">
                     <div className="w-[300px] h-[300px] md:w-[400px] md:h-[400px] lg:w-[500px] lg:h-[500px] relative">
-                      <Scene 
+                      <DynamicScene 
                         isActive={!isMuted && (isCallActive && isAIResponding)}
                         color={currentPersona.colorId}
                       />  

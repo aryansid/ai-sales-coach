@@ -9,9 +9,9 @@ import LoadingCreatingPersonas from '../components/LoadingCreatingPersonas';
 import WaveformBars from '../components/WaveformBars';
 
 // Import WaveformBars and personaTemplates
-import { personaTemplates } from '@/app/lib/constants';  
+import { personaTemplates } from '../lib/constants';  
 
-const Scene = dynamic(() => import('@/app/components/Scene'), {
+const DynamicScene = dynamic(() => import('../components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center overflow-visible">
@@ -195,7 +195,7 @@ export default function PersonasDashboard() {
                       <div className="animate-pulse text-violet-400">Loading...</div>
                     </div>
                   }>
-                    <Scene 
+                    <DynamicScene 
                       isActive={hoveredCard !== null}
                       color={getActiveAccentColor()}
                     />
