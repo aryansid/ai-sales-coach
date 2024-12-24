@@ -5,10 +5,10 @@ import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import WelcomeCard from '@/components/WelcomeCard';
-import LoadingCreatingPersonas from '@/components/LoadingCreatingPersonas';
+import WelcomeCard from '../app/components/WelcomeCard';
+import LoadingCreatingPersonas from '../app/components/LoadingCreatingPersonas';
 
-const DynamicScene = dynamic(() => import('@/components/Scene'), {
+const DynamicScene = dynamic(() => import('../app/components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center overflow-visible">

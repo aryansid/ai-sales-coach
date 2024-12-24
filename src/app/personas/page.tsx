@@ -5,8 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import LoadingCreatingPersonas from '@/components/LoadingCreatingPersonas';
-import WaveformBars from '@/components/WaveformBars';
+import LoadingCreatingPersonas from '../components/LoadingCreatingPersonas';
+import WaveformBars from '../components/WaveformBars';
 
 // Import WaveformBars and personaTemplates
 import { personaTemplates } from '@/app/lib/constants';  
