@@ -11,10 +11,20 @@ const nextConfig = {
       'framer-motion': require.resolve('framer-motion'),
     };
 
+    // Add fallbacks for missing node modules
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+
     return config;
   },
   // Remove experimental features that might cause issues
-  output: 'standalone'
+  output: 'standalone',
+  reactStrictMode: true,
+  swcMinify: true,
 }
 
 module.exports = nextConfig
