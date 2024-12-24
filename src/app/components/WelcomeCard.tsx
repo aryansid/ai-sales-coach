@@ -7,7 +7,7 @@ interface WelcomeCardProps {
   onSubmit: (data: { company: string; services: string }) => void;
 }
 
-export function WelcomeCard({ onSubmit }: WelcomeCardProps) {
+const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
   const [company, setCompany] = useState('');
   const [services, setServices] = useState('');
 
@@ -80,4 +80,6 @@ export function WelcomeCard({ onSubmit }: WelcomeCardProps) {
       </motion.div>
     </motion.div>
   );
-}
+};
+
+export default WelcomeCard;

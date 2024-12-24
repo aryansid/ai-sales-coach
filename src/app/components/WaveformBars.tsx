@@ -8,7 +8,7 @@ interface WaveformBarsProps {
   numBars?: number;
 }
 
-export const WaveformBars = ({ isActive, color, numBars = 12 }: WaveformBarsProps) => {
+const WaveformBars = ({ isActive, color, numBars = 12 }: WaveformBarsProps) => {
   const baseHeights = [60, 40, 80, 30, 70, 40, 90, 50, 75, 35, 65, 45];
   
   return (
@@ -40,3 +40,5 @@ export const WaveformBars = ({ isActive, color, numBars = 12 }: WaveformBarsProp
     </div>
   );
 };
+
+export default WaveformBars;

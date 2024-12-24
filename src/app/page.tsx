@@ -7,9 +7,8 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import WelcomeCard from '@/components/WelcomeCard';
 import LoadingCreatingPersonas from '@/components/LoadingCreatingPersonas';
-import Scene from '@/components/Scene';
 
-const Scene = dynamic(() => import('@/app/components/Scene'), {
+const DynamicScene = dynamic(() => import('@/components/Scene'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center overflow-visible">
@@ -117,7 +116,7 @@ export default function Welcome() {
                       <div className="animate-pulse text-violet-400">Loading...</div>
                     </div>
                   }>
-                    <Scene 
+                    <DynamicScene 
                       isActive={false}
                       color={3}
                     />
