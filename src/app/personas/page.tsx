@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import LoadingCreatingPersonas from '@/app/components/LoadingCreatingPersonas';
+import LoadingCreatingPersonas from '@/components/LoadingCreatingPersonas';
+import WaveformBars from '@/components/WaveformBars';
 
 // Import WaveformBars and personaTemplates
-import { WaveformBars } from '@/app/components/WaveformBars';  
 import { personaTemplates } from '@/app/lib/constants';  
 
 const Scene = dynamic(() => import('@/app/components/Scene'), {
