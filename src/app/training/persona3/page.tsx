@@ -44,7 +44,7 @@ const DynamicScene = dynamic(() => import('../../../app/components/Scene'), {
 });
 
 // Add this constant at the top level (after imports)
-const RELAY_SERVER_URL = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8081';
+const RELAY_SERVER_URL = 'wss://sales-training-server.fly.dev';
 
 export default function TrainingSession() {
   // Move all state declarations to top

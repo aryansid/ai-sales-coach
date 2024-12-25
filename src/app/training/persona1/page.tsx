@@ -42,7 +42,7 @@ const DynamicScene = dynamic(() => import('../../../app/components/Scene'), {
   )
 });
 
-const RELAY_SERVER_URL = process.env.NEXT_PUBLIC_RELAY_SERVER_URL || 'ws://localhost:8081';
+const RELAY_SERVER_URL = 'wss://sales-training-server.fly.dev';
 
 export default function TrainingSession() {
 
