@@ -23,8 +23,7 @@ const nextConfig = {
   },
   // Remove experimental features that might cause issues
   output: 'standalone',
-  reactStrictMode: true,
-  swcMinify: true,
+  reactStrictMode: true
 }
 
 module.exports = nextConfig
