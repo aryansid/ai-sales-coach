@@ -44,7 +44,7 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
                 onChange={(e) => setCompany(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg bg-white/50 border border-zinc-200 
                          focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 
-                         outline-none transition-all"
+                         outline-none transition-all text-black"
                 placeholder="Enter your company name"
               />
             </div>
@@ -58,7 +58,7 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
                 onChange={(e) => setServices(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg bg-white/50 border border-zinc-200 
                          focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 
-                         outline-none transition-all min-h-[120px]"
+                         outline-none transition-all min-h-[120px] text-black"
                 placeholder="Describe your insurance services..."
               />
             </div>
