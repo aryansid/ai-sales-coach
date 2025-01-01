@@ -39,7 +39,7 @@ const trainingCards = [
 ];
 
 export default function PersonasDashboard() {
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [personas, setPersonas] = useState<any[]>([]);
