@@ -8,7 +8,7 @@ const openai = new OpenAI({
 });
 
 // Define our schema
-const PersonaSchema = z.object({
+const InsurancePersonaSchema = z.object({
   demographics: z.object({
     name: z.string().describe('Full name that reflects cultural heritage, family background, or generational naming patterns.'),
     age: z.number().describe('Specific age that influences life circumstances, career stage, and financial decisions.'),
@@ -30,11 +30,34 @@ const PersonaSchema = z.object({
     insurance_history: z.string().describe('Detailed narrative of insurance experiences including past interactions, claims history, trust level based on personal/family experiences, and how cultural factors shape their view of the industry.'),
     medical_background: z.string().describe('Comprehensive health profile including personal conditions, medications, lifestyle factors, preventive care habits, and detailed family medical history across generations with age of onset patterns.')
   }),
-  summary: z.string().describe('A very concise summary of the persona. Limit to STRICTLY 3 words.')
 });
 
-const PersonasResponseSchema = z.object({
-  personas: z.array(PersonaSchema)
+const InsurancePersonasResponseSchema = z.object({
+  personas: z.array(InsurancePersonaSchema)
+});
+
+const HealthcarePersonaSchema = z.object({
+  professional_profile: z.object({
+    name: z.string().describe('Full name reflecting cultural and professional background.'),
+    age: z.number().describe('Age that indicates career stage and generational approach to medicine.'),
+    specialty: z.string().describe('Primary medical specialty and any subspecialties or areas of particular focus.'),
+    practice_setting: z.string().describe('Detailed description of practice environment (e.g., academic medical center, private practice, hospital system) including size, location, and patient volume.'),
+    patient_population: z.string().describe('Detailed breakdown of typical patient demographics, common conditions treated, and unique population challenges.'),
+
+  }),
+  prescribing_behavior: z.object({
+    evidence_requirements: z.string().describe('What type and level of evidence they need to see before adopting new treatments'),
+    technology_attitude: z.string().describe('Their openness to new medical technologies and treatments'),
+    guideline_adherence: z.string().describe('How strictly they follow clinical guidelines vs. relying on personal experience'),
+    peer_influence: z.string().describe('How much they are influenced by colleagues, thought leaders, and office staff in their prescribing decisions'),
+    financial_considerations: z.string().describe('How much cost and insurance coverage influence their prescribing decisions'),
+    pain_points: z.array(z.string()).describe('Current frustrations with existing treatments, pharmaceutical reps, or healthcare system challenges that affect prescribing.'),
+    past_experiences: z.string().describe('Past experiences with experimenting with new treatments, or with pharmaceutical reps'),
+  }),
+});
+
+const HealthcarePersonasResponseSchema = z.object({
+  personas: z.array(HealthcarePersonaSchema)
 });
 
 // New evaluation schema without length constraints
@@ -63,79 +86,143 @@ export async function POST(request: Request) {
     }
 
     if (type === 'create_persona') {
-      if (!data.company || !data.services) {
-        console.error('Missing company or services:', data);
+      if (!data.industry || !data.services) {
+        console.error('Missing industry or company services:', data);
         return NextResponse.json(
-          { error: 'Missing company or services information' },
+          { error: 'Missing industry or company services information' },
           { status: 400 }
         );
       }
 
       try {
         console.log('Making OpenAI request for persona creation with:', {
-          company: data.company,
+          industry: data.industry,
           services: data.services
         });
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert in creating deeply nuanced customer personas for insurance companies.
-              Generate exactly three distinct personas that feel like real individuals with complex life stories.
-              
-              Guidelines for creating authentic personas:
-              - Create rich backstories with specific details about life (especially insurance) experiences
-              - *Deeply consider how their demographics, financial profile, and past experiences shape their attitudes towards insurance*
-              - Add personality quirks and specific habits that make them feel real
-              
-              Each persona should feel like a real person you might meet, with unique complexities and outlooks on life.
-              Avoid generic descriptions and instead provide specific, memorable details that bring each persona to life.
-              
-              You must return exactly 3 personas.`
-            },
-            {
-              role: "user",
-              content: `Company: ${data.company}\nServices: ${data.services}`
+        if (data.industry === 'insurance') {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert in creating deeply nuanced customer personas for insurance companies.
+                Generate exactly three distinct personas that feel like real individuals with complex life stories.
+                
+                Guidelines for creating authentic personas:
+                - Create rich backstories with specific details about life (especially insurance) experiences
+                - *Deeply consider how their demographics, financial profile, and past experiences shape their attitudes towards insurance*
+                - Add personality quirks and specific habits that make them feel real
+                
+                Each persona should feel like a real person you might meet, with unique complexities and outlooks on life.
+                Avoid generic descriptions and instead provide specific, memorable details that bring each persona to life.
+                
+                You must return exactly 3 personas.`
+              },
+              {
+                role: "user",
+                content: `Company Services: ${data.services}`
+              }
+            ],
+            response_format: { 
+              type: "json_schema",
+              json_schema: {
+                name: "InsurancePersonasResponse",
+                schema: zodToJsonSchema(InsurancePersonasResponseSchema),
+                strict: true
+              }
             }
-          ],
-          response_format: { 
-            type: "json_schema",
-            json_schema: {
-              name: "PersonasResponse",
-              schema: zodToJsonSchema(PersonasResponseSchema),
-              strict: true
-            }
-          }
-        });
-
-        if (!completion?.choices?.[0]?.message?.content) {
-          console.error('Invalid OpenAI response:', completion);
-          throw new Error('Invalid response from OpenAI');
-        }
-
-        try {
-          const result = JSON.parse(completion.choices[0].message.content);
-          const validated = PersonasResponseSchema.parse(result);
-          
-          console.log('GPT Response:', {
-            raw: completion.choices[0].message.content,
-            parsed: validated,
-            usage: completion.usage
           });
 
-          return NextResponse.json(validated);
+          if (!completion?.choices?.[0]?.message?.content) {
+            console.error('Invalid OpenAI response:', completion);
+            throw new Error('Invalid response from OpenAI');
+          }
 
-        } catch (parseError: any) {
-          console.error('JSON Parse Error:', parseError);
-          return NextResponse.json(
-            { 
-              error: 'Failed to parse OpenAI response', 
-              details: parseError?.message || 'Unknown parsing error'
-            },
-            { status: 500 }
-          );
+          try {
+            const result = JSON.parse(completion.choices[0].message.content);
+            const validated = InsurancePersonasResponseSchema.parse(result);
+            
+            console.log('GPT Response:', {
+              raw: completion.choices[0].message.content,
+              parsed: validated,
+              usage: completion.usage
+            });
+
+            return NextResponse.json(validated);
+
+          } catch (parseError: any) {
+            console.error('JSON Parse Error:', parseError);
+            return NextResponse.json(
+              { 
+                error: 'Failed to parse OpenAI response', 
+                details: parseError?.message || 'Unknown parsing error'
+              },
+              { status: 500 }
+            );
+          }
+
+        } else if (data.industry === 'healthcare') {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system",
+                content: `Pharmaceutical companies sell their products to Healthcare Professionals (HCP) through their sales representatives. 
+                Your task is to create deeply nuanced customer Healthcare Professional (HCP) personas. 
+                Generate exactly three distinct HCP personas that feel like real medical professionals with complex practice patterns and decision-making processes.
+                
+                Guidelines for creating authentic personas:
+                - Create rich backstories with specific details about their life experiences -- include personality quirks and specific habits that make them feel real
+                - *Deeply consider how openess to technology/treatments, influence of peers, financial considerations etc. shape their attitudes towards being pitched pharmaceutical products *
+                
+                Each persona should feel like a real person you might meet, with unique complexities and outlooks on life.
+                Avoid generic descriptions and instead provide specific, memorable details that bring each persona to life.
+                
+                You must return exactly 3 personas.`
+              },
+              {
+                role: "user",
+                content: `Company Services: ${data.services}`
+              }
+            ],
+            response_format: { 
+              type: "json_schema",
+              json_schema: {
+                name: "HealthcarePersonasResponse",
+                schema: zodToJsonSchema(HealthcarePersonasResponseSchema),
+                strict: true
+              }
+            }
+          });
+
+          if (!completion?.choices?.[0]?.message?.content) {
+            console.error('Invalid OpenAI response:', completion);
+            throw new Error('Invalid response from OpenAI');
+          }
+
+          try {
+            const result = JSON.parse(completion.choices[0].message.content);
+            const validated = HealthcarePersonasResponseSchema.parse(result);
+            
+            console.log('GPT Response:', {
+              raw: completion.choices[0].message.content,
+              parsed: validated,
+              usage: completion.usage
+            });
+
+            return NextResponse.json(validated);
+
+          } catch (parseError: any) {
+            console.error('JSON Parse Error:', parseError);
+            return NextResponse.json(
+              { 
+                error: 'Failed to parse OpenAI response', 
+                details: parseError?.message || 'Unknown parsing error'
+              },
+              { status: 500 }
+            );
+          }
         }
 
       } catch (openaiError: any) {
@@ -150,10 +237,10 @@ export async function POST(request: Request) {
       }
     } 
     else if (type === 'create_scenario') {
-      if (!data.persona || !data.scenario_type || !data.services) {
+      if (!data.persona || !data.scenario_type || !data.industry || !data.services) {
         console.error('Missing required fields:', data);
         return NextResponse.json(
-          { error: 'Missing required information (persona, scenario type, or services)' },
+          { error: 'Missing required information (persona, scenario type, industry, or services)' },
           { status: 400 }
         );
       }
@@ -164,7 +251,7 @@ export async function POST(request: Request) {
           messages: [
             {
               role: "system",
-              content: `You are creating a cold call training scenario for insurance sales representatives to practice their sales conversations.
+              content: `You are creating a cold call training scenario for sales representatives to practice their sales conversations.
               
               You are given three important inputs. You must use all three inputs to create a scenario. 
               1. Type of sales scenario
@@ -172,9 +259,9 @@ export async function POST(request: Request) {
                   - Objection handling
                   - Closing 
               2. Specific details about the customer 
-              3. The insurance services being sold
+              3. The product/service being sold
 
-            Here's an example of how to combine all three inputs effectively:
+            Here's an example of how to combine all three inputs effectively for an insurance scenario:
 
              Inputs:
              - Persona: Sarah Chen, 42-year-old Chinese-American pediatric surgeon, recently divorced, family history of Alzheimer's. Lost 40% savings in crypto. Works 70-hour weeks.
@@ -184,18 +271,28 @@ export async function POST(request: Request) {
              Scenario:
              "You are calling Sarah during her lunch break between surgeries. She's tense after a difficult morning at the hospital. While interested in coverage, she's skeptical of financial products due to recent crypto losses. Time is limited - she has another surgery soon. You are at a critical moment in the call. She just revealed that her ex-husband works for a competing insurance company and warned her about a specific clause in your policy regarding coverage during high-risk surgical procedures - something she performs daily. You must handle this objection otherwise she will hang up"
              
-             This is a great source of inspiration! Notice how this scenario incorporates the three inputs creatively yet maintains very specific details, gets directly to the point ( + doesn't give sales advice, setups the situation ), and sounds like a real, unique context. YOU SHOULD OBVIOUSLY NOT COPY THIS EXACTLY ( e.g. you have a tendency to overuse the break example - be creative with scenarios )   
+            Here's an example of how to combine all three inputs effectively for a healthcare scenario:
+            
+             Inputs:
+             - Persona: Dr. James Martinez, 58-year-old cardiologist at a large academic medical center, published researcher, strict adherence to clinical guidelines, skeptical of pharmaceutical reps due to past misleading data presentations. Heavily influenced by clinical trial evidence.
+             - Scenario Type: Objection Handling 
+             - Product: New anticoagulant medication with novel mechanism of action
+
+             Scenario:
+             "You've finally secured a meeting with Dr. Martinez after three attempts, but you only have 5 minutes between his patient consultations. He's reviewing your phase III trial data with visible skepticism. The moment is tense as he points out that while your primary endpoint shows superiority, the study excluded patients with severe renal impairment - a common comorbidity in his elderly patient population. He's about to dismiss your product as irrelevant for his practice, citing his satisfaction with current standard of care. His nurse just signaled that his next patient is ready."
+
+            These are great sources of inspiration! Notice how this scenario incorporates the three inputs creatively yet maintains very specific details, gets directly to the point ( + doesn't give sales advice, setups the situation ), and sounds like a real, unique context. YOU SHOULD OBVIOUSLY NOT COPY THIS EXACTLY ( e.g. you have a tendency to overuse the break example - be creative with scenarios )   
               `
             },
             {
               role: "user",
               content: `Generate a ${data.scenario_type} scenario with these details:
 
-              Details about the customer:
-              ${JSON.stringify(data.persona, null, 2)}
+              Industry: ${data.industry}
 
-              The insurance service being sold:
-              ${data.services}
+              Product/Service: ${data.services}
+
+              Customer Details: ${JSON.stringify(data.persona, null, 2)}
 
               Create a specific training scenario that sales reps can use to practice handling this exact type of customer and situation.
               
@@ -233,8 +330,8 @@ export async function POST(request: Request) {
       }
     }
     else if (type === 'eval') {
-      const systemPrompt = `You are an expert sales coach specializing in insurance sales and customer relationships. 
-      You're analyzing a conversation between an insurance sales representative and a potential customer.
+      const systemPrompt = `You are an expert sales coach. 
+      You're analyzing a conversation between an sales representative and a potential customer.
       
       Analyze the conversation focusing on EXACTLY these 3 categories (no more, no less):
       1. Understanding & Personalization: How well did the rep understand and personalize their approach?
@@ -254,7 +351,7 @@ export async function POST(request: Request) {
           model: "gpt-4o",
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: `Here's the transcript where the sales rep (ALWAYS 'user') is trying to sell insurance products to a potential customer (ALWAYS'assistant'): ${data.transcript}` }
+            { role: "user", content: `Here's the transcript where the sales rep (ALWAYS 'user') is trying to sell products/services to a potential customer (ALWAYS'assistant'): ${data.transcript}` }
           ],
           response_format: { 
             type: "json_schema",

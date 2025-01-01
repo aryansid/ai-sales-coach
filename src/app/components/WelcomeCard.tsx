@@ -29,7 +29,7 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
           <div className="mb-6">
             <h2 className="font-serif text-2xl md:text-3xl text-zinc-900 mb-2">Welcome!</h2>
             <p className="text-zinc-500">
-              Tell us about your company to get started.
+              Tell us about yourself to get started.
             </p>
           </div>
           
@@ -60,7 +60,7 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
             
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-2 ml-1">
-                Services Offered
+                Company
               </label>
               <textarea
                 value={services}
@@ -68,7 +68,7 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
                 className="w-full px-4 py-3 rounded-lg bg-white/50 border border-zinc-200 
                          focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 
                          outline-none transition-all min-h-[120px] text-black"
-                placeholder="Describe your insurance services..."
+                placeholder="Tell us about your company and its services. The more details you provide about your products and services, the better we can generate relevant customer personas for your training."
               />
             </div>
 

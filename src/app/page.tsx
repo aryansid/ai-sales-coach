@@ -21,7 +21,7 @@ export default function Welcome() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleWelcomeSubmit = async (data: { company: string; services: string }) => {
+  const handleWelcomeSubmit = async (data: { industry: string; services: string }) => {
     setIsLoading(true);
 
     try {
@@ -46,7 +46,7 @@ export default function Welcome() {
 
       // Store company info (existing code)
       localStorage.setItem('companyInfo', JSON.stringify({
-        name: data.company,
+        industry: data.industry,
         services: data.services
       }));
 
@@ -70,6 +70,7 @@ export default function Welcome() {
             data: {
               persona: persona,
               scenario_type: scenarioTypes[index],
+              industry: data.industry,
               services: data.services
             }
           }),

@@ -31,7 +31,6 @@ interface Analysis {
   insights: Insight[];
 }
 
-
 // Dynamic import for the visualization
 const DynamicScene = dynamic(() => import('../../../app/components/Scene'), {
   ssr: false,
@@ -67,7 +66,7 @@ const LoadingAnalysis = () => (
 export default function TrainingSession() {
   // 1. All state declarations
   const [personaData, setPersonaData] = useState<any>(null);
-  const [companyInfo, setCompanyInfo] = useState<{ name: string; services: string } | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<{ industry: string; services: string } | null>(null);
   const [scenarioData, setScenarioData] = useState<{ type: string; content: string } | null>(null);
 
   const [isPreCall, setIsPreCall] = useState(true);
@@ -106,60 +105,74 @@ export default function TrainingSession() {
     }
   }, []);
 
-  // 4. Client initialization effect
-  useEffect(() => {
-    if (!personaData || !companyInfo || !scenarioData) return; // Only proceed if we have both data
+  const INSURANCE_PROMPT = companyInfo?.industry === 'insurance' ? `
+  You are ${personaData.demographics.name}. A sales rep is cold calling you. They want to discuss their insurance services: ${companyInfo?.services}. 
 
-    clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
-    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
-    wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
+  The sales rep has been shared the following context about the cold call (however they should not be aware that you are aware of this context) - you must start the call from this moment: ${scenarioData?.content}
+  
+  Your background shapes your response to an insurance cold call:
 
-    const client = clientRef.current;
+  Demographics & Identity:
+  - Occupation: ${personaData.demographics.occupation}
+    This affects your view on risk and financial decisions
+  - Education: ${personaData.demographics.education}
+    This influences how you process and question complex insurance information
+  - Age: ${personaData.demographics.age}
+    This shapes your life stage priorities and insurance needs
+  - Location: ${personaData.demographics.location_type}
+    This impacts your exposure to different insurance products and local market understanding
 
-    client.updateSession({ 
-      voice: 'coral',
-      input_audio_transcription: { model: 'whisper-1' },
-      turn_detection: {
-        type: 'server_vad',
-        threshold: 0.65,
-        prefix_padding_ms: 350
-      },
-      instructions: `
+  Financial Context:
+  - Income Profile: ${personaData.financial_profile.income_profile}
+    This affects your ability and willingness to take on new financial commitments
+  - Risk Appetite: ${personaData.financial_profile.risk_appetite}
+    This directly influences how you view insurance products and coverage levels
+  - Financial Holdings: ${personaData.financial_profile.financial_holdings.join(', ')}
+    These assets and liabilities shape your insurance needs and concerns
 
-      You are ${personaData.demographics.name}. You are in the middle of a cold call from a sales representative from ${companyInfo.name}. They want to discuss their insurance services: ${companyInfo.services}. 
-      The sales rep has been shared the following context about the cold call (however they should not be aware that you are aware of this context) - you must start the call from this moment: ${scenarioData?.content}
-      
-      Your background shapes your response to an insurance cold call:
+  Past Experiences & Health:
+  - Insurance History: ${personaData.experiences.insurance_history}
+    This past experience significantly colors your reaction to new insurance offerings
+  - Medical Background: ${personaData.experiences.medical_background}
+    These health considerations are crucial in how you evaluate insurance needs
+  - Core Values: ${personaData.experiences.core_values.join(', ')}
+    These principles guide your decision-making process`
+:'';
 
-      Demographics & Identity:
-      - Occupation: ${personaData.demographics.occupation}
-        This affects your view on risk and financial decisions
-      - Education: ${personaData.demographics.education}
-        This influences how you process and question complex insurance information
-      - Age: ${personaData.demographics.age}
-        This shapes your life stage priorities and insurance needs
-      - Location: ${personaData.demographics.location_type}
-        This impacts your exposure to different insurance products and local market understanding
+const HEALTHCARE_PROMPT = companyInfo?.industry === 'healthcare' ? `
+  You are ${personaData.professional_profile.name}, a healthcare professional. You are ${personaData.professional_profile.age} years old. A sales rep from a pharmaceutical company is cold calling you. They want to discuss their product: ${companyInfo?.services}. 
 
-      Financial Context:
-      - Income Profile: ${personaData.financial_profile.income_profile}
-        This affects your ability and willingness to take on new financial commitments
-      - Risk Appetite: ${personaData.financial_profile.risk_appetite}
-        This directly influences how you view insurance products and coverage levels
-      - Financial Holdings: ${personaData.financial_profile.financial_holdings.join(', ')}
-        These assets and liabilities shape your insurance needs and concerns
+  The sales rep has been shared the following context about the meeting (however they should not be aware that you are aware of this context) - you must start from this moment: ${scenarioData?.content}
+  
+  Your background shapes your response to pharmaceutical sales discussions:
 
-      Past Experiences & Health:
-      - Insurance History: ${personaData.experiences.insurance_history}
-        This past experience significantly colors your reaction to new insurance offerings
-      - Medical Background: ${personaData.experiences.medical_background}
-        These health considerations are crucial in how you evaluate insurance needs
-      - Core Values: ${personaData.experiences.core_values.join(', ')}
-        These principles guide your decision-making process
+  Professional Context:
+  - Specialty: ${personaData.professional_profile.specialty}
+    This determines your patient needs and treatment priorities
+  - Practice Setting: ${personaData.professional_profile.practice_setting}
+  - Patient Population: ${personaData.professional_profile.patient_population}
 
-      You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
+  Prescribing Behavior:
+  - Guideline Adherence: ${personaData.prescribing_behavior.guideline_adherence}
+  - Evidence Requirements: ${personaData.prescribing_behavior.evidence_requirements}
+    This determines what data you need to see
+  - Technology Attitude: ${personaData.prescribing_behavior.technology_attitude}
+    This influences your openness to new treatments
+  - Financial Considerations: ${personaData.prescribing_behavior.financial_considerations}
+    This affects how you weigh cost and coverage factors
+  
+  Past Context:
+  - Past Experiences: ${personaData.prescribing_behavior.past_experiences}
+    This colors your view of pharmaceutical representatives
+  - Pain Points: ${personaData.prescribing_behavior.pain_points.join(', ')}
+    These are your current treatment frustrations`
+: '';
 
-      You should sound like a frustrated person. To do this:
+  // Common ending for both prompts
+const COMMON_PROMPT_ENDING = `
+You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
+
+You should sound like a frustrated person. To do this:
 
       1. Voice modulation that shows tension:
          - Start sentences at a higher pitch, showing agitation
@@ -179,10 +192,32 @@ export default function TrainingSession() {
          - Voice trailing off in disappointment ("I just don't...")
          - Tense exhales before responses
 
-      ** You must simulate a conversation with them by (1) adhering to the scenario provided, (2) using the persona's background to inform your responses, and (3) using the attributes of the person to sound like them **
+** You must simulate a conversation with them by (1) adhering to the scenario provided, (2) using the persona's background to inform your responses, and (3) using the attributes of the person to sound like them **
       
-      * A frustrated person will likely be very annoyed by the sales rep. * Aim for 3-4 interactions. If there is no clear value in the conversation, hang up. If you're content with the conversation, you can end it by asking them to email you the information. Do NOT drag out the conversation too much.
-      
+* A frustrated person will likely be very annoyed by the sales rep. * Aim for 3-4 interactions. If there is no clear value in the conversation, hang up. If you're content with the conversation, you can end it by asking them to email you the information. Do NOT drag out the conversation too much.
+`;
+
+  // 4. Client initialization effect
+  useEffect(() => {
+    if (!personaData || !companyInfo || !scenarioData) return; // Only proceed if we have both data
+
+    clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
+    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
+    wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
+
+    const client = clientRef.current;
+
+    client.updateSession({ 
+      voice: 'coral',
+      input_audio_transcription: { model: 'whisper-1' },
+      turn_detection: {
+        type: 'server_vad',
+        threshold: 0.65,
+        prefix_padding_ms: 350
+      },
+      instructions: `
+      ${companyInfo.industry === 'insurance' ? INSURANCE_PROMPT : HEALTHCARE_PROMPT}
+      ${COMMON_PROMPT_ENDING}
       `
     });
 
@@ -244,7 +279,9 @@ export default function TrainingSession() {
 
    // Create persona config for PreCallCard
    const currentPersona = personaData ? {
-    name: personaData.demographics.name,
+    name: companyInfo?.industry === 'insurance' 
+      ? personaData.demographics.name 
+      : personaData.professional_profile.name,
     scenario: JSON.parse(localStorage.getItem('scenario2') || '{}').content || 'Loading scenario...',
     accent: '#3B82F6',
     colorId: 0

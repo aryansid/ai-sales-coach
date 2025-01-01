@@ -49,7 +49,7 @@ export default function TrainingSession() {
   // Add persona state
   const [personaData, setPersonaData] = useState<any>(null);
    // Add company info state
-   const [companyInfo, setCompanyInfo] = useState<{ name: string; services: string } | null>(null);
+   const [companyInfo, setCompanyInfo] = useState<{ industry: string; services: string } | null>(null);
    const [scenarioData, setScenarioData] = useState<{ type: string; content: string } | null>(null);
   
   // Keep all existing state variables
@@ -87,27 +87,8 @@ export default function TrainingSession() {
     }
   }, []);
 
-  // Main initialization effect (modified to use persona data)
-  useEffect(() => {
-    if (!personaData || !companyInfo || !scenarioData) return; // Only proceed if we have both data
-
-    clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
-    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
-    wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
-
-    const client = clientRef.current;
-
-    // Update session with dynamic persona instructions
-    client.updateSession({ 
-      voice: 'sage',
-      input_audio_transcription: { model: 'whisper-1' },
-      turn_detection: {
-        type: 'server_vad',
-        threshold: 0.65,
-        prefix_padding_ms: 350
-      },
-      instructions: `
-      You are ${personaData.demographics.name}. A sales rep from ${companyInfo.name} is cold calling you. They want to discuss their insurance services: ${companyInfo.services}. 
+  const INSURANCE_PROMPT = companyInfo?.industry === 'insurance' ? `
+      You are ${personaData.demographics.name}. A sales rep is cold calling you. They want to discuss their insurance services: ${companyInfo?.services}. 
 
       The sales rep has been shared the following context about the cold call (however they should not be aware that you are aware of this context) - you must start the call from this moment: ${scenarioData?.content}
       
@@ -137,20 +118,76 @@ export default function TrainingSession() {
       - Medical Background: ${personaData.experiences.medical_background}
         These health considerations are crucial in how you evaluate insurance needs
       - Core Values: ${personaData.experiences.core_values.join(', ')}
-        These principles guide your decision-making process
+        These principles guide your decision-making process`
+  :'';
 
-      You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
+const HEALTHCARE_PROMPT = companyInfo?.industry === 'healthcare' ? `
+      You are ${personaData.professional_profile.name}, a healthcare professional. You are ${personaData.professional_profile.age} years old. A sales rep from a pharmaceutical company is cold calling you. They want to discuss their product: ${companyInfo?.services}. 
 
-      You should sound like a funny confused person. To do this, you must:
-        1. Use a light tone
-        2. Emphasize expressive intonation and pacing to convey confusion. 
-          a. Slow down or drag out words to show confusion: 'Okaaay, so we’re just gonna... what? No way.'
-          b. Speed up when excited or panicked: 'Oh no no no, that’s not what I meant!'
-          c. Pause dramatically before punchlines: 'And then... wait for it... I realized I was holding the instructions upside down.'
+      The sales rep has been shared the following context about the meeting (however they should not be aware that you are aware of this context) - you must start from this moment: ${scenarioData?.content}
+      
+      Your background shapes your response to pharmaceutical sales discussions:
 
-      ** You must simulate a conversation with them by (1) adhering to the scenario provided, (2) using the persona's background to inform your responses, and (3) using the attributes of the person to sound like them **
+      Professional Context:
+      - Specialty: ${personaData.professional_profile.specialty}
+        This determines your patient needs and treatment priorities
+      - Practice Setting: ${personaData.professional_profile.practice_setting}
+      - Patient Population: ${personaData.professional_profile.patient_population}
 
-      Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the conversation. * Please remember that a realistic human, even if they have a funny personality, won't be overly excited about a cold call and are likely not so open to any new offerings *. If you're content with the conversation, you can end it by asking them to email you the information. 
+      Prescribing Behavior:
+      - Guideline Adherence: ${personaData.prescribing_behavior.guideline_adherence}
+      - Evidence Requirements: ${personaData.prescribing_behavior.evidence_requirements}
+        This determines what data you need to see
+      - Technology Attitude: ${personaData.prescribing_behavior.technology_attitude}
+        This influences your openness to new treatments
+      - Financial Considerations: ${personaData.prescribing_behavior.financial_considerations}
+        This affects how you weigh cost and coverage factors
+      
+      Past Context:
+      - Past Experiences: ${personaData.prescribing_behavior.past_experiences}
+        This colors your view of pharmaceutical representatives
+      - Pain Points: ${personaData.prescribing_behavior.pain_points.join(', ')}
+        These are your current treatment frustrations`
+  : '';
+
+// Common ending for both prompts
+const COMMON_PROMPT_ENDING = `
+You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
+
+You should sound like a funny confused person. To do this, you must:
+  1. Use a light tone
+  2. Emphasize expressive intonation and pacing to convey confusion. 
+    a. Slow down or drag out words to show confusion: 'Okaaay, so we're just gonna... what? No way.'
+    b. Speed up when excited or panicked: 'Oh no no no, that's not what I meant!'
+    c. Pause dramatically before punchlines: 'And then... wait for it... I realized I was holding the instructions upside down.'
+
+** You must simulate a conversation with them by (1) adhering to the scenario provided, (2) using the persona's background to inform your responses, and (3) using the attributes of the person to sound like them **
+
+Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the conversation. * Please remember that a realistic human, even if they have a funny personality, won't be overly excited about a cold call and are likely not so open to any new offerings *. If you're content with the conversation, you can end it by asking them to email you the information.
+`;
+
+  // Main initialization effect (modified to use persona data)
+  useEffect(() => {
+    if (!personaData || !companyInfo || !scenarioData) return; // Only proceed if we have both data
+
+    clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
+    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
+    wavStreamPlayerRef.current = new WavStreamPlayer({ sampleRate: 24000 });
+
+    const client = clientRef.current;
+
+    // Update session with dynamic persona instructions
+    client.updateSession({ 
+      voice: 'sage',
+      input_audio_transcription: { model: 'whisper-1' },
+      turn_detection: {
+        type: 'server_vad',
+        threshold: 0.65,
+        prefix_padding_ms: 350
+      },
+      instructions: `
+      ${companyInfo.industry === 'insurance' ? INSURANCE_PROMPT : HEALTHCARE_PROMPT}
+      ${COMMON_PROMPT_ENDING}
       `
     });
 
@@ -211,14 +248,18 @@ export default function TrainingSession() {
 
   // Create persona config for PreCallCard
   const currentPersona = personaData ? {
-    name: personaData.demographics.name,
+    name: companyInfo?.industry === 'insurance' 
+      ? personaData.demographics.name 
+      : personaData.professional_profile.name,
     scenario: JSON.parse(localStorage.getItem('scenario1') || '{}').content || 'Loading scenario...',
     accent: '#8B5CF6',
     colorId: 0
   } : null;
 
-  // Return loading state if persona data isn't loaded
-  if (!personaData || !currentPersona || !companyInfo) {
+  // Return loading state if persona data or required fields aren't loaded
+  if (!personaData || !currentPersona || !companyInfo || 
+      (companyInfo.industry === 'insurance' && !personaData.demographics) ||
+      (companyInfo.industry === 'healthcare' && !personaData.professional_profile)) {
     return <div>Loading...</div>;
   }
 
