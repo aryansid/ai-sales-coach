@@ -20,6 +20,24 @@ const DynamicScene = dynamic(() => import('../components/Scene'), {
   )
 });
 
+const trainingCards = [
+  {
+    title: "Engagement & Discovery",
+    description: "Build trust fast and uncover key pain points.",
+    personaId: 0  // Maps to persona1
+  },
+  {
+    title: "Objection Handling",
+    description: "Turn objections into opportunities and keep deals moving.",
+    personaId: 1  // Maps to persona3
+  },
+  {
+    title: "Closing",
+    description: "Confidently drive deals to the finish line.",
+    personaId: 2  // Maps to persona4
+  }
+];
+
 export default function PersonasDashboard() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
@@ -28,33 +46,11 @@ export default function PersonasDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    // Load and map personas from localStorage
-    const existingPersonas = [];
-    for (let i = 1; i <= 3; i++) {
-      try {
-        const persona = localStorage.getItem(`persona${i}`);
-        if (persona) {
-          const rawPersona = JSON.parse(persona);
-          existingPersonas.push({
-            ...rawPersona,
-            id: i - 1,
-            name: rawPersona.demographics?.name || 'Unknown',
-            description: rawPersona.experiences?.core_values?.join(' • ') || '',
-            ...personaTemplates[i - 1]
-          });
-        }
-      } catch (error) {
-        console.error(`Error parsing persona${i}:`, error);
-        // Optionally redirect to home if data is corrupted
-        router.push('/');
-        return;
-      }
-    }
-
-    if (existingPersonas.length === 0) {
+    // Simple check to verify personas exist
+    const persona1 = localStorage.getItem('persona1');
+    if (!persona1) {
       router.push('/');
-    } else {
-      setPersonas(existingPersonas);
+      return;
     }
   }, [router]);
 
@@ -64,8 +60,7 @@ export default function PersonasDashboard() {
   };
 
   const getActiveAccentColor = () => {
-    const activePersona = personas.find(p => p.id === hoveredCard);
-    return activePersona ? activePersona.colorId : 3;
+    return hoveredCard !== null ? hoveredCard : 3;
   };
 
   return (
@@ -118,10 +113,10 @@ export default function PersonasDashboard() {
           </motion.div>
 
           <div className="flex flex-col gap-3">
-            {personas.map((persona, index) => (
+            {trainingCards.map((card, index) => (
               <div 
-                key={persona.id} 
-                onClick={() => handleCardClick(index)}
+                key={index} 
+                onClick={() => handleCardClick(card.personaId)}
                 className="block w-full no-underline cursor-pointer"
               >
                 <motion.div
@@ -132,17 +127,20 @@ export default function PersonasDashboard() {
                     delay: index * 0.1,
                     ease: "easeOut"
                   }}
-                  onHoverStart={() => setHoveredCard(persona.id)}
+                  onHoverStart={() => {
+                    console.log('Hovering card:', index);
+                    setHoveredCard(index);
+                  }}
                   onHoverEnd={() => setHoveredCard(null)}
                   whileHover={{ x: 8, scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={`
                     relative h-[70px] md:h-[90px] lg:h-[100px] p-3 md:p-6
                     rounded-lg md:rounded-xl
-                    bg-gradient-to-r ${persona.gradient}
-                    hover:bg-gradient-to-r ${persona.hover}
+                    bg-gradient-to-r ${personaTemplates[index]?.gradient}
+                    hover:bg-gradient-to-r ${personaTemplates[index]?.hover}
                     backdrop-blur-xl
-                    border ${persona.border}
+                    border ${personaTemplates[index]?.border}
                     group
                     flex items-center justify-between
                     hover:shadow-lg
@@ -152,30 +150,30 @@ export default function PersonasDashboard() {
                 >
                   <div className="flex items-center gap-2 md:gap-3">
                     <motion.div 
-                      className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${persona.dot}`}
+                      className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${personaTemplates[index]?.dot}`}
                       animate={{
-                        scale: hoveredCard === persona.id ? [1, 1.2, 1] : 1,
+                        scale: hoveredCard === index ? [1, 1.2, 1] : 1,
                       }}
                       transition={{
                         duration: 1,
-                        repeat: hoveredCard === persona.id ? Infinity : 0,
+                        repeat: hoveredCard === index ? Infinity : 0,
                         ease: "easeInOut"
                       }}
                     />
                     <div>
                       <h2 className="font-serif text-lg md:text-xl lg:text-2xl text-zinc-900 mb-0.5">
-                        {persona.name}
+                        {card.title}
                       </h2>
                       <p className="text-zinc-600 text-xs md:text-sm">
-                        {persona.description}
+                        {card.description}
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <WaveformBars 
-                      isActive={hoveredCard === persona.id} 
-                      color={persona.accent}
+                      isActive={hoveredCard === index} 
+                      color={personaTemplates[index]?.accent}
                       numBars={8}
                     />
                   </div>

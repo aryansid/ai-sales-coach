@@ -207,13 +207,12 @@ export default function TrainingSession() {
     };
   }, [personaData, companyInfo]);
 
-  // Move currentPersona computation before the loading check
+  // Create persona config for PreCallCard
   const currentPersona = personaData ? {
     name: personaData.demographics.name,
-    description: `${personaData.demographics.occupation} in ${personaData.demographics.location_type}`,
-    traits: personaData.experiences.core_values,
-    accent: '#8B5CF6',
-    colorId: 2  // Different color for persona 3
+    scenario: JSON.parse(localStorage.getItem('scenario2') || '{}').content || 'Loading scenario...',
+    accent: '#F59E0B',
+    colorId: 0
   } : null;
 
   // Move loading check after all hooks
@@ -464,7 +463,7 @@ export default function TrainingSession() {
                 <div className="h-full min-h-0 w-full lg:w-[45%] p-6 md:p-12 lg:p-16 flex flex-col">
                   {/* Header */}
                   <div className="flex-none mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
+                    <Link href="/personas" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
                       <ArrowLeft className="w-4 h-4" />
                       Back to personas
                     </Link>

@@ -25,7 +25,10 @@ export default function Welcome() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/analyze', {
+      // First create personas (existing code)
+      console.log("Creating personas...");
+
+      const personasResponse = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,24 +36,59 @@ export default function Welcome() {
         body: JSON.stringify({ type: 'create_persona', data }),
       });
 
-      const responseData = await response.json();
+      const personasData = await personasResponse.json();
       
-      if (!response.ok) {
-        throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
+      if (!personasResponse.ok) {
+        throw new Error(personasData.error || `HTTP error! status: ${personasResponse.status}`);
       }
 
-      console.log("responseData", responseData);
+      console.log("Personas Data:", personasData);
 
-      // Store company info
+      // Store company info (existing code)
       localStorage.setItem('companyInfo', JSON.stringify({
         name: data.company,
         services: data.services
       }));
 
-      // Store raw persona data from API
-      responseData.personas.forEach((persona: any, index: number) => {
+      // Create and store scenarios for each persona
+      console.log("Creating scenarios...");
+
+      const scenarioTypes = ['rapport_building', 'objection_handling', 'closing_deal'];
+      
+      await Promise.all(personasData.personas.map(async (persona: any, index: number) => {
+        // Store persona
         localStorage.setItem(`persona${index + 1}`, JSON.stringify(persona));
-      });
+        
+        // Create scenario for this persona
+        const scenarioResponse = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'create_scenario',
+            data: {
+              persona: persona,
+              scenario_type: scenarioTypes[index],
+              services: data.services
+            }
+          }),
+        });
+
+        const scenarioData = await scenarioResponse.json();
+        
+        if (!scenarioResponse.ok) {
+          throw new Error(scenarioData.error || `HTTP error! status: ${scenarioResponse.status}`);
+        }
+
+        console.log("Scenario Data:", scenarioData);
+        
+        // Store scenario
+        localStorage.setItem(`scenario${index + 1}`, JSON.stringify({
+          type: scenarioTypes[index],
+          content: scenarioData.scenario
+        }));
+      }));
 
       // Navigate to personas dashboard
       router.push('/personas');

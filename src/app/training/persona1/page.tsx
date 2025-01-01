@@ -50,6 +50,7 @@ export default function TrainingSession() {
   const [personaData, setPersonaData] = useState<any>(null);
    // Add company info state
    const [companyInfo, setCompanyInfo] = useState<{ name: string; services: string } | null>(null);
+   const [scenarioData, setScenarioData] = useState<{ type: string; content: string } | null>(null);
   
   // Keep all existing state variables
   const [isPreCall, setIsPreCall] = useState(true);
@@ -73,6 +74,7 @@ export default function TrainingSession() {
   useEffect(() => {
     const storedPersona = localStorage.getItem('persona1');
     const storedCompanyInfo = localStorage.getItem('companyInfo');
+    const storedScenario = localStorage.getItem('scenario1');
     
     if (storedPersona) {
       setPersonaData(JSON.parse(storedPersona));
@@ -80,11 +82,14 @@ export default function TrainingSession() {
     if (storedCompanyInfo) {
       setCompanyInfo(JSON.parse(storedCompanyInfo));
     }
+    if (storedScenario) {
+      setScenarioData(JSON.parse(storedScenario));
+    }
   }, []);
 
   // Main initialization effect (modified to use persona data)
   useEffect(() => {
-    if (!personaData || !companyInfo) return; // Only proceed if we have both data
+    if (!personaData || !companyInfo || !scenarioData) return; // Only proceed if we have both data
 
     clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
@@ -102,8 +107,11 @@ export default function TrainingSession() {
         prefix_padding_ms: 350
       },
       instructions: `
-      You are ${personaData.demographics.name}. You just received a cold call from a sales representative from ${companyInfo.name}. They want to discuss their insurance services: ${companyInfo.services}. 
-      You must simulate a conversation with them. Your background shapes your response to an insurance cold call:
+      You are ${personaData.demographics.name}. A sales rep from ${companyInfo.name} is cold calling you. They want to discuss their insurance services: ${companyInfo.services}. 
+
+      The sales rep has been shared the following context about the cold call (however they should not be aware that you are aware of this context) - you must start the call from this moment: ${scenarioData?.content}
+      
+      Your background shapes your response to an insurance cold call:
 
       Demographics & Identity:
       - Occupation: ${personaData.demographics.occupation}
@@ -140,7 +148,9 @@ export default function TrainingSession() {
           b. Speed up when excited or panicked: 'Oh no no no, that’s not what I meant!'
           c. Pause dramatically before punchlines: 'And then... wait for it... I realized I was holding the instructions upside down.'
 
-      Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the conversation. 
+      ** You must simulate a conversation with them by (1) adhering to the scenario provided, (2) using the persona's background to inform your responses, and (3) using the attributes of the person to sound like them **
+
+      Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the conversation. * Please remember that a realistic human, even if they have a funny personality, won't be overly excited about a cold call and are likely not so open to any new offerings *. If you're content with the conversation, you can end it by asking them to email you the information. 
       `
     });
 
@@ -198,6 +208,19 @@ export default function TrainingSession() {
       wavStreamPlayerRef.current?.interrupt();
     };
   }, [personaData, companyInfo]); // Add companyInfo as dependency
+
+  // Create persona config for PreCallCard
+  const currentPersona = personaData ? {
+    name: personaData.demographics.name,
+    scenario: JSON.parse(localStorage.getItem('scenario1') || '{}').content || 'Loading scenario...',
+    accent: '#8B5CF6',
+    colorId: 0
+  } : null;
+
+  // Return loading state if persona data isn't loaded
+  if (!personaData || !currentPersona || !companyInfo) {
+    return <div>Loading...</div>;
+  }
 
   const toggleCall = async () => {
     if (!isCallActive) {
@@ -400,20 +423,6 @@ export default function TrainingSession() {
       </div>
     </motion.div>
   );
-
-  // Create persona config for PreCallCard
-  const currentPersona = personaData ? {
-    name: personaData.demographics.name,
-    description: `${personaData.demographics.occupation} in ${personaData.demographics.location_type}`,
-    traits: personaData.experiences.core_values,
-    accent: '#8B5CF6',
-    colorId: 0
-  } : null;
-
-  // Return loading state if persona data isn't loaded
-  if (!personaData || !currentPersona || !companyInfo) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">

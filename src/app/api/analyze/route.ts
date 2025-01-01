@@ -86,15 +86,14 @@ export async function POST(request: Request) {
               Generate exactly three distinct personas that feel like real individuals with complex life stories.
               
               Guidelines for creating authentic personas:
-              - Create rich backstories with specific details about life experiences
+              - Create rich backstories with specific details about life (especially insurance) experiences
               - *Deeply consider how their demographics, financial profile, and past experiences shape their attitudes towards insurance*
-              - Add personality quirks and specific habits that make them feel real**
+              - Add personality quirks and specific habits that make them feel real
               
               Each persona should feel like a real person you might meet, with unique complexities and outlooks on life.
               Avoid generic descriptions and instead provide specific, memorable details that bring each persona to life.
               
-              You must return exactly 3 personas, each with distinctly different backgrounds, life stages, 
-              and attitudes toward insurance.`
+              You must return exactly 3 personas.`
             },
             {
               role: "user",
@@ -127,6 +126,7 @@ export async function POST(request: Request) {
           });
 
           return NextResponse.json(validated);
+
         } catch (parseError: any) {
           console.error('JSON Parse Error:', parseError);
           return NextResponse.json(
@@ -137,6 +137,7 @@ export async function POST(request: Request) {
             { status: 500 }
           );
         }
+
       } catch (openaiError: any) {
         console.error('OpenAI API Error:', openaiError);
         return NextResponse.json(
@@ -148,6 +149,89 @@ export async function POST(request: Request) {
         );
       }
     } 
+    else if (type === 'create_scenario') {
+      if (!data.persona || !data.scenario_type || !data.services) {
+        console.error('Missing required fields:', data);
+        return NextResponse.json(
+          { error: 'Missing required information (persona, scenario type, or services)' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `You are creating a cold call training scenario for insurance sales representatives to practice their sales conversations.
+              
+              You are given three important inputs. You must use all three inputs to create a scenario. 
+              1. Type of sales scenario
+                  - Rapport building
+                  - Objection handling
+                  - Closing 
+              2. Specific details about the customer 
+              3. The insurance services being sold
+
+            Here's an example of how to combine all three inputs effectively:
+
+             Inputs:
+             - Persona: Sarah Chen, 42-year-old Chinese-American pediatric surgeon, recently divorced, family history of Alzheimer's. Lost 40% savings in crypto. Works 70-hour weeks.
+             - Scenario Type: Objection Handling 
+             - Services: Premium health and life insurance packages
+
+             Scenario:
+             "You are calling Sarah during her lunch break between surgeries. She's tense after a difficult morning at the hospital. While interested in coverage, she's skeptical of financial products due to recent crypto losses. Time is limited - she has another surgery soon. You are at a critical moment in the call. She just revealed that her ex-husband works for a competing insurance company and warned her about a specific clause in your policy regarding coverage during high-risk surgical procedures - something she performs daily. You must handle this objection otherwise she will hang up"
+             
+             This is a great source of inspiration! Notice how this scenario incorporates the three inputs creatively yet maintains very specific details, gets directly to the point ( + doesn't give sales advice, setups the situation ), and sounds like a real, unique context. YOU SHOULD OBVIOUSLY NOT COPY THIS EXACTLY ( e.g. you have a tendency to overuse the break example - be creative with scenarios )   
+              `
+            },
+            {
+              role: "user",
+              content: `Generate a ${data.scenario_type} scenario with these details:
+
+              Details about the customer:
+              ${JSON.stringify(data.persona, null, 2)}
+
+              The insurance service being sold:
+              ${data.services}
+
+              Create a specific training scenario that sales reps can use to practice handling this exact type of customer and situation.
+              
+              CRITICAL GUIDELINES:
+              - BE VERY SPECIFIC AND NUANCED. THINK DEEPLY ABOUT EACH AND EVERY ATTRIBUTE OF THE THREE INPUT AND COMBINE THEM. PRESENT A UNIQUE SITUATION.
+              - JUST SETUP THE SITUATION. DO NOT TELL WHAT THE SALES REP SHOULD DO. TELL THEM WHAT THE SITUATION IS. 
+              - KEEP IT BRIEF BUT NUANCED. 2-3 sentences maximum that set up the situation in a specific, unique context.
+              - BE VERY CLEAR. Who are you calling? What's unique about this call? What's the situation? What stage of the sales process are you in -- are you about to call them for the first time, or are you in the middle of the call already (e.g., if it's closing, you're going to be at a critical moment in the call and need to close the deal soon)
+              - START DIRECTLY WITH THE SCENARIO DESCRIPTION - NO HEADERS OR LABELS.
+              - ALWAYS A COLD CALL SCENARIO. 
+              - GET STRAIGHT TO THE RELEVANT FACTS. NO FANCY STORYTELLING OR SCENE-SETTING. 
+              
+              `
+            }
+          ]
+        });
+
+        if (!completion?.choices?.[0]?.message?.content) {
+          throw new Error('Invalid response from OpenAI');
+        }
+
+        console.log('GPT Response:', completion.choices[0].message.content);
+
+        return NextResponse.json({ scenario: completion.choices[0].message.content });
+
+      } catch (error: any) {
+        console.error('Scenario Creation Error:', error);
+        return NextResponse.json(
+          { 
+            error: 'Failed to generate scenario', 
+            details: error?.message || 'Unknown error' 
+          },
+          { status: 500 }
+        );
+      }
+    }
     else if (type === 'eval') {
       const systemPrompt = `You are an expert sales coach specializing in insurance sales and customer relationships. 
       You're analyzing a conversation between an insurance sales representative and a potential customer.
@@ -207,11 +291,12 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
   } catch (error: any) {
-    console.error('API Error:', error);
+    console.error('POST request API Error:', error);
     return NextResponse.json(
       { 
-        error: 'Failed to process request', 
+        error: 'Failed to process POST request', 
         details: error?.message || 'Unknown error' 
       },
       { status: 500 }

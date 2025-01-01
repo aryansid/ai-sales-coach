@@ -4,8 +4,7 @@ import { Phone } from 'lucide-react';
 interface PreCallCardProps {
   persona: {
     name: string;
-    description: string;
-    traits: string[];
+    scenario: string;
   };
   onStartCall: () => void;
 }
@@ -19,19 +18,8 @@ const PreCallCard = ({ persona, onStartCall }: PreCallCardProps) => {
       className="bg-white/50 backdrop-blur-sm rounded-2xl border border-zinc-200 shadow-sm p-6 space-y-6"
     >
       <div className="space-y-4">
-        <h2 className="font-serif text-2xl text-zinc-900">About {persona.name}</h2>
-        <p className="text-zinc-600 leading-relaxed">{persona.description}</p>
-        <div className="space-y-2">
-          <h3 className="font-medium text-zinc-800">Key Traits:</h3>
-          <ul className="space-y-2">
-            {persona.traits.map((trait, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-violet-400 mt-2" />
-                <span className="text-zinc-600">{trait}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <h2 className="font-serif text-2xl text-zinc-900">{persona.name}</h2>
+        <p className="text-zinc-600 leading-relaxed">{persona.scenario}</p>
       </div>
       
       <motion.button

@@ -4,11 +4,11 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 
 interface WelcomeCardProps {
-  onSubmit: (data: { company: string; services: string }) => void;
+  onSubmit: (data: { industry: string; services: string }) => void;
 }
 
 const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
-  const [company, setCompany] = useState('');
+  const [industry, setIndustry] = useState('');
   const [services, setServices] = useState('');
 
   return (
@@ -29,24 +29,33 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
           <div className="mb-6">
             <h2 className="font-serif text-2xl md:text-3xl text-zinc-900 mb-2">Welcome!</h2>
             <p className="text-zinc-500">
-              Tell us about your insurance company to get started.
+              Tell us about your company to get started.
             </p>
           </div>
           
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-2 ml-1">
-                Company Name
+                Industry
               </label>
-              <input
-                type="text"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/50 border border-zinc-200 
-                         focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 
-                         outline-none transition-all text-black"
-                placeholder="Enter your company name"
-              />
+              <div className="relative">
+                <select
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-white/50 border border-zinc-200 
+                           focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 
+                           outline-none transition-all text-black appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>Select your industry</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="healthcare">Healthcare</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
             
             <div>
@@ -64,8 +73,8 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
             </div>
 
             <button
-              onClick={() => onSubmit({ company, services })}
-              disabled={!company || !services}
+              onClick={() => onSubmit({ industry, services })}
+              disabled={!industry || !services}
               className="w-full bg-gradient-to-r from-violet-500 to-blue-500 
                        hover:from-violet-600 hover:to-blue-600 text-white 
                        rounded-lg px-6 py-3.5 font-medium 

@@ -68,6 +68,8 @@ export default function TrainingSession() {
   // 1. All state declarations
   const [personaData, setPersonaData] = useState<any>(null);
   const [companyInfo, setCompanyInfo] = useState<{ name: string; services: string } | null>(null);
+  const [scenarioData, setScenarioData] = useState<{ type: string; content: string } | null>(null);
+
   const [isPreCall, setIsPreCall] = useState(true);
   const [isAIResponding, setIsAIResponding] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
@@ -90,6 +92,7 @@ export default function TrainingSession() {
   useEffect(() => {
     const storedPersona = localStorage.getItem('persona2');
     const storedCompanyInfo = localStorage.getItem('companyInfo');
+    const storedScenario = localStorage.getItem('scenario2');
     
     if (storedPersona) {
       setPersonaData(JSON.parse(storedPersona));
@@ -97,11 +100,15 @@ export default function TrainingSession() {
     if (storedCompanyInfo) {
       setCompanyInfo(JSON.parse(storedCompanyInfo));
     }
+
+    if (storedScenario) {
+      setScenarioData(JSON.parse(storedScenario));
+    }
   }, []);
 
   // 4. Client initialization effect
   useEffect(() => {
-    if (!personaData || !companyInfo) return;
+    if (!personaData || !companyInfo || !scenarioData) return; // Only proceed if we have both data
 
     clientRef.current = new RealtimeClient({ url: RELAY_SERVER_URL });
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
@@ -119,8 +126,10 @@ export default function TrainingSession() {
       },
       instructions: `
 
-      You are ${personaData.demographics.name}. You just received a cold call from a sales representative from ${companyInfo.name}. They want to discuss their insurance services: ${companyInfo.services}. 
-      You must simulate a conversation with them. Your background shapes your response to an insurance cold call:
+      You are ${personaData.demographics.name}. You are in the middle of a cold call from a sales representative from ${companyInfo.name}. They want to discuss their insurance services: ${companyInfo.services}. 
+      The sales rep has been shared the following context about the cold call (however they should not be aware that you are aware of this context) - you must start the call from this moment: ${scenarioData?.content}
+      
+      Your background shapes your response to an insurance cold call:
 
       Demographics & Identity:
       - Occupation: ${personaData.demographics.occupation}
@@ -150,18 +159,29 @@ export default function TrainingSession() {
 
       You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
 
-      You should sound like a strong headed person. To do this, you must:
-      1. Use a firm, confident tone 
-      2. Emphasize expressive intonation, pacing and length to convey authority: 
-        a. Slow down to emphasize key points or pause to let points sink in (e.g, "Let me explain ... first, we need to identify the root cause")
-        b. Vary pitch for emphasis: raise pitch when introducing insights (e.g. "If we reduce overhead ...") and lower pitch for conclusions (e.g., "So, this approach minimizes risk")
-        c. Control pacing dynamically: slow for complex ideas (e.g., "What we’re looking at... is a systemic issue") and speed up slightly when driving home conclusions (e.g., "And that's why this strategy works")
-        d. Adjust response length to match context: use short, decisive statements to convey authority (e.g., "This won't work") and use longer explainations when presenting logical steps (e.g., "Here’s how it breaks down: first, we tackle the timeline. Second, we allocate resources efficiently")
-        e. Conclude with authority and finality (e.g., "And that’s why this isn’t just the best choice—it’s the only choice.")
-      3. Use analogies to sound like a very logical person and back up your points (e.g., "We installed this new system last year and it was a disaster because ... ")
-      4. Use fillers like "well...", "frankly...", "hold on..." to sound like a real person that's also authorative. 
+      You should sound like a frustrated person. To do this:
+
+      1. Voice modulation that shows tension:
+         - Start sentences at a higher pitch, showing agitation
+         - End with sharp downward tone ("I've heard this before")
+         - Emphasize words with stress ("I SPECIFICALLY asked about this")
+         - Quick, clipped responses when annoyed
+
+      2. Pacing that reveals frustration:
+         - Interrupt yourself mid-sentence ("Look- you know what-")
+         - Speed up when expressing complaints
+         - Sudden pauses before critical points ("... and that's exactly the problem")
+         - Short, exasperated sighs between points
+
+      3. Speech patterns of someone at their limit:
+         - Cut off sentences ("You know what- never mind.")
+         - Repeat key concerns ("The thing is- the THING is-")
+         - Voice trailing off in disappointment ("I just don't...")
+         - Tense exhales before responses
+
+      ** You must simulate a conversation with them by (1) adhering to the scenario provided, (2) using the persona's background to inform your responses, and (3) using the attributes of the person to sound like them **
       
-      Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the conversation. 
+      * A frustrated person will likely be very annoyed by the sales rep. * Aim for 3-4 interactions. If there is no clear value in the conversation, hang up. If you're content with the conversation, you can end it by asking them to email you the information. Do NOT drag out the conversation too much.
       
       `
     });
@@ -222,14 +242,20 @@ export default function TrainingSession() {
     };
   }, [personaData, companyInfo]);
 
-  // 5. Create persona config
-  const currentPersona = personaData ? {
+   // Create persona config for PreCallCard
+   const currentPersona = personaData ? {
     name: personaData.demographics.name,
-    description: `${personaData.demographics.occupation} in ${personaData.demographics.location_type}`,
-    traits: personaData.experiences.core_values,
+    scenario: JSON.parse(localStorage.getItem('scenario2') || '{}').content || 'Loading scenario...',
     accent: '#3B82F6',
-    colorId: 1
+    colorId: 0
   } : null;
+
+
+  // 7. Loading state
+  if (!personaData || !currentPersona || !companyInfo) {
+    return <div>Loading...</div>;
+  }
+
 
   // 6. All your handler functions
   const toggleCall = async () => {
@@ -425,11 +451,6 @@ export default function TrainingSession() {
     }
   };
 
-  // 7. Loading state
-  if (!personaData || !currentPersona || !companyInfo) {
-    return <div>Loading...</div>;
-  }
-
   // 8. Main render
   return (
     <div className="min-h-screen font-sans relative bg-white overflow-hidden">
@@ -472,7 +493,7 @@ export default function TrainingSession() {
                 <div className="h-full min-h-0 w-full lg:w-[45%] p-6 md:p-12 lg:p-16 flex flex-col">
                   {/* Header */}
                   <div className="flex-none mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
+                    <Link href="/personas" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
                       <ArrowLeft className="w-4 h-4" />
                       Back to personas
                     </Link>

@@ -22,5 +22,6 @@ export const personaTemplates = [
       dot: 'bg-amber-400',
       accent: '#F59E0B',
       colorId: 2
-    }
-  ];
+    },
+    
+];
