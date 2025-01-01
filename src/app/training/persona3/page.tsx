@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -255,7 +255,7 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
       wavRecorderRef.current?.end();
       wavStreamPlayerRef.current?.interrupt();
     };
-  }, [personaData, companyInfo]);
+  }, [personaData, companyInfo, scenarioData, INSURANCE_PROMPT, HEALTHCARE_PROMPT, COMMON_PROMPT_ENDING]);
 
   // Create persona config for PreCallCard
   const currentPersona = personaData ? {

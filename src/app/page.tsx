@@ -20,6 +20,7 @@ const DynamicScene = dynamic(() => import('../app/components/Scene'), {
 export default function Welcome() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
   const handleWelcomeSubmit = async (data: { industry: string; services: string }) => {
     setIsLoading(true);
