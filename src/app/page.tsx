@@ -26,7 +26,6 @@ export default function Welcome() {
     setIsLoading(true);
 
     try {
-      // First create personas (existing code)
       console.log("Creating personas...");
 
       const personasResponse = await fetch('/api/analyze', {
