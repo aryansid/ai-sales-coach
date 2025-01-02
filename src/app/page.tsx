@@ -36,7 +36,17 @@ export default function Welcome() {
         body: JSON.stringify({ type: 'create_persona', data }),
       });
 
-      const personasData = await personasResponse.json();
+      const contentType = personasResponse.headers.get('content-type');
+      let personasData;
+
+      if (contentType?.includes('application/json')) {
+        personasData = await personasResponse.json();
+        console.log('JSON Response:', personasData);
+      } else {
+        personasData = await personasResponse.text();
+        console.log('Non-JSON Response:', personasData);
+        throw new Error(`Received non-JSON response: ${personasData}`);
+      }
       
       if (!personasResponse.ok) {
         throw new Error(personasData.error || `HTTP error! status: ${personasResponse.status}`);
