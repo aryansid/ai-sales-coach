@@ -73,16 +73,16 @@ const WelcomeCard = ({ onSubmit }: WelcomeCardProps) => {
             </div>
 
             <button
-              onClick={() => onSubmit({ industry, services })}
-              disabled={!industry || !services}
-              className="w-full bg-gradient-to-r from-violet-500 to-blue-500 
-                       hover:from-violet-600 hover:to-blue-600 text-white 
-                       rounded-lg px-6 py-3.5 font-medium 
-                       disabled:opacity-50 disabled:cursor-not-allowed 
-                       transition-all shadow-lg shadow-violet-500/25
-                       hover:shadow-xl hover:shadow-violet-500/30"
+                onClick={() => onSubmit({ industry, services })}
+                disabled={!industry || !services}
+                className="w-full bg-gradient-to-r from-rose-200 via-fuchsia-200 to-amber-100
+                    hover:from-rose-300 hover:via-fuchsia-300 hover:to-amber-200
+                    text-zinc-500 rounded-lg px-6 py-3.5 font-medium
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    transition-all shadow-lg shadow-fuchsia-500/20
+                    hover:shadow-xl hover:shadow-fuchsia-500/25"
             >
-              Continue to Training
+                Continue to Training
             </button>
           </div>
         </div>

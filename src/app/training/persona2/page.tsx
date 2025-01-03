@@ -284,7 +284,7 @@ You should sound like a frustrated person. To do this:
       : personaData.professional_profile.name,
     scenario: JSON.parse(localStorage.getItem('scenario2') || '{}').content || 'Loading scenario...',
     accent: '#3B82F6',
-    colorId: 0
+    colorId: 1
   } : null;
 
 

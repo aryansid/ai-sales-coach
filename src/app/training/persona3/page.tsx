@@ -264,7 +264,7 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
       : personaData.professional_profile.name,
     scenario: JSON.parse(localStorage.getItem('scenario3') || '{}').content || 'Loading scenario...',
     accent: '#F59E0B',
-    colorId: 0
+    colorId: 2
   } : null;
 
   // Move loading check after all hooks
