@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Inter, Playfair_Display } from 'next/font/google';
 import "./globals.css";
+import { PostHogProvider } from "./PostHogProvider";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,7 +20,7 @@ const playfair = Playfair_Display({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: "Sales Trainer",
-  description: "Sales Trainer by Wizy",
+  description: "Sales Trainer by Wisteria",
 };
 
 export default function RootLayout({
@@ -32,7 +33,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.className} ${playfair.className} antialiased`}
       >
-        {children}
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
       </body>
     </html>
   );
