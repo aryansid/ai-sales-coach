@@ -158,6 +158,31 @@ const HEALTHCARE_PROMPT = companyInfo?.industry === 'healthcare' ? `
     These are your current treatment frustrations`
 : '';
 
+const OTHER_PROMPT = companyInfo?.industry !== 'insurance' && companyInfo?.industry !== 'healthcare' && personaData?.professional_background ? `
+      You are ${personaData.professional_background.name}. A sales rep is cold calling you about ${companyInfo?.services}. 
+
+      The sales rep has been shared the following context about the cold call (however they should not be aware that you are aware of this context) - you must start from this moment: ${scenarioData?.content}
+      
+      Your background shapes your response to sales discussions:
+
+      Professional Context:
+      - Occupation: ${personaData.professional_background.occupation}
+      - Work Environment: ${personaData.professional_background.work_environment}
+      - Location: ${personaData.professional_background.location}
+
+      Buying Profile:
+      - Decision Making Role: ${personaData.buying_profile.decision_making_role}
+      - Budget Authority: ${personaData.buying_profile.budget_authority}
+      - Previous Solutions: ${personaData.buying_profile.previous_solutions}
+      - Pain Points: ${personaData.buying_profile.pain_points.join(', ')}
+
+      Relevant Context:
+      - Service Background: ${personaData.relevant_context.service_specific_background}
+      - Communication Style: ${personaData.relevant_context.communication_preferences}
+      - Decision Drivers: ${personaData.relevant_context.decision_drivers.join(', ')}
+      - Stakeholder Influences: ${personaData.relevant_context.stakeholder_influences}`
+  : '';
+
   // Common ending for both prompts
 const COMMON_PROMPT_ENDING = `
 You must perfectly emulate a human with the above background. You should always draw on your background to inform your responses (e.g., if you have a medical condition, you would be more likely to ask about insurance coverage for that condition).
@@ -196,7 +221,11 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
         prefix_padding_ms: 350
       },
       instructions: `
-      ${companyInfo.industry === 'insurance' ? INSURANCE_PROMPT : HEALTHCARE_PROMPT}
+      ${companyInfo.industry === 'insurance' 
+        ? INSURANCE_PROMPT 
+        : companyInfo.industry === 'healthcare'
+        ? HEALTHCARE_PROMPT
+        : OTHER_PROMPT}
       ${COMMON_PROMPT_ENDING}
       `
     });
@@ -255,21 +284,39 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
       wavRecorderRef.current?.end();
       wavStreamPlayerRef.current?.interrupt();
     };
-  }, [personaData, companyInfo, scenarioData, INSURANCE_PROMPT, HEALTHCARE_PROMPT, COMMON_PROMPT_ENDING]);
+  }, [personaData, companyInfo, scenarioData, INSURANCE_PROMPT, HEALTHCARE_PROMPT, OTHER_PROMPT, COMMON_PROMPT_ENDING]);
 
   // Create persona config for PreCallCard
-  const currentPersona = personaData ? {
-    name: companyInfo?.industry === 'insurance' 
-      ? personaData.demographics.name 
-      : personaData.professional_profile.name,
+  const currentPersona = personaData && companyInfo ? {
+    name: (() => {
+      if (companyInfo.industry === 'insurance' && personaData.demographics?.name) {
+        return personaData.demographics.name;
+      } else if (companyInfo.industry === 'healthcare' && personaData.professional_profile?.name) {
+        return personaData.professional_profile.name;
+      } else if (personaData.professional_background?.name) {
+        return personaData.professional_background.name;
+      }
+      return 'Unknown Name'; // Fallback
+    })(),
     scenario: JSON.parse(localStorage.getItem('scenario3') || '{}').content || 'Loading scenario...',
     accent: '#F59E0B',
     colorId: 2
   } : null;
 
-  // Move loading check after all hooks
-  if (!personaData || !currentPersona || !companyInfo) {
-    return <div>Loading...</div>;
+  // Add data validation check
+  const hasRequiredData = (() => {
+    if (companyInfo?.industry === 'insurance') {
+      return !!personaData?.demographics;
+    } else if (companyInfo?.industry === 'healthcare') {
+      return !!personaData?.professional_profile;
+    } else {
+      return !!personaData?.professional_background;
+    }
+  })();
+
+  // Update loading check
+  if (!personaData || !currentPersona || !companyInfo || !hasRequiredData) {
+    return <div>Loading persona data...</div>;
   }
 
   const toggleCall = async () => {

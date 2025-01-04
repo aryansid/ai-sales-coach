@@ -60,6 +60,32 @@ const HealthcarePersonasResponseSchema = z.object({
   personas: z.array(HealthcarePersonaSchema)
 });
 
+const OtherPersonaSchema = z.object({
+  professional_background: z.object({
+    name: z.string().describe('Full name reflecting cultural and professional background.'),
+    age: z.number().describe('Age that indicates life stage and decision-making context.'),
+    occupation: z.string().describe('Current role, career trajectory, and professional context.'),
+    work_environment: z.string().describe('Details about their workplace, responsibilities, and decision-making authority.'),
+    location: z.string().describe('Geographic and community context that influences their needs and decisions.')
+  }),
+  buying_profile: z.object({
+    decision_making_role: z.string().describe('Their role in purchasing decisions (e.g., sole decision maker, influencer, needs approval)'),
+    budget_authority: z.string().describe('Their financial discretion and budget constraints'),
+    pain_points: z.array(z.string()).describe('Current challenges or needs related to the product/service being sold'),
+    previous_solutions: z.string().describe('Experience with similar products/services and past purchasing decisions')
+  }),
+  relevant_context: z.object({
+    service_specific_background: z.string().describe('Specific experiences, knowledge, or circumstances relevant to the service being sold'),
+    communication_preferences: z.string().describe('Preferred communication style, availability, and best ways to reach them'),
+    decision_drivers: z.array(z.string()).describe('Key factors that influence their purchasing decisions'),
+    stakeholder_influences: z.string().describe('How other stakeholders or organizational dynamics affect their decisions')
+  })
+});
+
+const OtherPersonasResponseSchema = z.object({
+  personas: z.array(OtherPersonaSchema)
+});
+
 // New evaluation schema without length constraints
 const evaluationSchema = z.object({
   scores: z.array(z.object({
@@ -204,6 +230,68 @@ export async function POST(request: Request) {
           try {
             const result = JSON.parse(completion.choices[0].message.content);
             const validated = HealthcarePersonasResponseSchema.parse(result);
+            
+            console.log('GPT Response:', {
+              raw: completion.choices[0].message.content,
+              parsed: validated,
+              usage: completion.usage
+            });
+
+            return NextResponse.json(validated);
+
+          } catch (parseError: any) {
+            console.error('JSON Parse Error:', parseError);
+            return NextResponse.json(
+              { 
+                error: 'Failed to parse OpenAI response', 
+                details: parseError?.message || 'Unknown parsing error'
+              },
+              { status: 500 }
+            );
+          }
+        } else {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system",
+                content: `You are an expert in creating deeply nuanced buyer personas for sales training.
+                Generate exactly three distinct personas that feel like real individuals with complex professional backgrounds and buying behaviors.
+                
+                Guidelines for creating authentic personas:
+                - Create rich backstories with specific details about their professional life and buying experiences
+                - *Deeply consider how their role, context, and past experiences shape their attitudes towards being sold to*
+                - Add personality quirks and specific habits that make them feel real
+                - Focus especially on aspects relevant to ${data.services}
+                
+                Each persona should feel like a real person you might meet, with unique complexities and decision-making patterns.
+                Avoid generic descriptions and instead provide specific, memorable details that bring each persona to life.
+                
+                You must return exactly 3 personas.`
+              },
+              {
+                role: "user",
+                content: `Company Services: ${data.services}`
+              }
+            ],
+            response_format: { 
+              type: "json_schema",
+              json_schema: {
+                name: "OtherPersonasResponse",
+                schema: zodToJsonSchema(OtherPersonasResponseSchema),
+                strict: true
+              }
+            }
+          });
+
+          if (!completion?.choices?.[0]?.message?.content) {
+            console.error('Invalid OpenAI response:', completion);
+            throw new Error('Invalid response from OpenAI');
+          }
+
+          try {
+            const result = JSON.parse(completion.choices[0].message.content);
+            const validated = OtherPersonasResponseSchema.parse(result);
             
             console.log('GPT Response:', {
               raw: completion.choices[0].message.content,
