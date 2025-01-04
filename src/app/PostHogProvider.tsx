@@ -12,10 +12,12 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
         session_recording: {
-          enabled: true,
           maskAllInputs: false,
-          maskAllText: false
-        }
+        }, 
+        loaded: (posthog) => {
+          console.log('PostHog loaded successfully')
+        }, 
+        debug: true
       })
       
       // Add debug event to verify tracking works
