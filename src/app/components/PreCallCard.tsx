@@ -15,7 +15,8 @@ const PreCallCard = ({ persona, onStartCall }: PreCallCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 0 }}
-      className="bg-white/50 backdrop-blur-sm rounded-2xl border border-zinc-200 shadow-sm p-6 space-y-6"
+      className="bg-white/50 backdrop-blur-sm rounded-2xl border border-zinc-200 shadow-sm p-6
+                 w-full relative z-10"
     >
       <div className="space-y-4">
         <h2 className="font-serif text-2xl text-zinc-900">{persona.name}</h2>
@@ -28,7 +29,8 @@ const PreCallCard = ({ persona, onStartCall }: PreCallCardProps) => {
         onClick={onStartCall}
         className="w-full py-3 px-4 rounded-xl bg-violet-50 hover:bg-violet-100 
                    border border-violet-200 text-violet-700 font-medium
-                   flex items-center justify-center gap-2 transition-colors"
+                   flex items-center justify-center gap-2 transition-colors
+                   mt-6"
       >
         <Phone className="w-5 h-5" />
         Start Conversation

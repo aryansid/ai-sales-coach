@@ -522,7 +522,7 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
   );
 
   return (
-    <div className="min-h-screen font-sans relative bg-white overflow-hidden">
+    <div className="min-h-screen font-sans relative bg-white">
       <ErrorPopup 
         isVisible={showError} 
         onClose={() => setShowError(false)}
@@ -530,12 +530,12 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
       />
       {/* Background gradients */}
       <div className="absolute inset-0 bg-gradient-to-br from-white via-zinc-50/90 to-zinc-100/80" />
-        <div className="absolute inset-0">
-          <div className="absolute top-0 -right-1/4 w-1/2 h-1/2 bg-gradient-to-br from-violet-100/20 via-blue-100/10 to-transparent rounded-full blur-3xl" />
+      <div className="absolute inset-0">
+        <div className="absolute top-0 -right-1/4 w-1/2 h-1/2 bg-gradient-to-br from-violet-100/20 via-blue-100/10 to-transparent rounded-full blur-3xl" />
         <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-tr from-amber-100/20 via-purple-100/10 to-transparent rounded-full blur-3xl" />
       </div>
 
-      <div className="relative p-4 h-screen">
+      <div className="relative p-4">
         <ConnectingOverlay isVisible={isConnecting} />
         <AnimatePresence mode="wait">
           {isAnalyzing && <LoadingAnalysis />}
@@ -550,18 +550,12 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
               <EvaluationScreen analysis={analysis} transcript={fullTranscript} />
             </motion.div>
           ) : !isAnalyzing && !showEvaluation ? (
-            <motion.div
-              key="chat"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-full"
-            >
-              <div className="relative h-full overflow-hidden flex flex-col lg:flex-row max-w-7xl mx-auto">
-                {/* Left side */}
-                <div className="h-full min-h-0 w-full lg:w-[45%] p-6 md:p-12 lg:p-16 flex flex-col">
-                  {/* Header */}
-                  <div className="flex-none mb-8">
+            <motion.div key="chat" className="max-w-7xl mx-auto">
+              {/* Remove height constraints and nested scrollable areas */}
+              <div className="flex flex-col lg:flex-row gap-8">
+                {/* Left side - Let it take natural height */}
+                <div className="w-full lg:w-[45%] p-6 md:p-12">
+                  <div className="mb-8">
                     <Link href="/personas" className="inline-flex items-center gap-2 text-zinc-500 hover:text-violet-500 mb-6">
                       <ArrowLeft className="w-4 h-4" />
                       Back to personas
@@ -574,8 +568,8 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
                     </div>
                   </div>
 
-                  {/* Chat or PreCall */}
-                  <div className="flex-1 min-h-0 overflow-auto">
+                  {/* PreCall or Chat */}
+                  <div>
                     <AnimatePresence mode="wait">
                       {isPreCall ? (
                         <PreCallCard 
@@ -597,15 +591,13 @@ Aim for 5-6 meaningful questions before making a decision. Do NOT drag out the c
                   </div>
                 </div>
 
-                {/* Right side - Visualization */}
-                <div className="h-full w-full lg:w-[55%] relative flex items-center justify-center">
-                  <div className="p-8 md:p-12 lg:p-16">
-                    <div className="w-[300px] h-[300px] md:w-[400px] md:h-[400px] lg:w-[500px] lg:h-[500px] relative">
-                      <DynamicScene 
-                        isActive={!isMuted && (isCallActive && isAIResponding)}
-                        color={currentPersona.colorId}
-                      />  
-                    </div>
+                {/* Right side - Blob */}
+                <div className="w-full lg:w-[55%] lg:flex lg:items-center">
+                  <div className="w-[300px] h-[300px] md:w-[400px] md:h-[400px] lg:w-[500px] lg:h-[500px] mx-auto">
+                    <DynamicScene 
+                      isActive={!isMuted && (isCallActive && isAIResponding)}
+                      color={currentPersona.colorId}
+                    />
                   </div>
                 </div>
               </div>

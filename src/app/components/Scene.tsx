@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 
 const Scene = ({ isActive, color }: { isActive: boolean, color: number }) => {
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative pointer-events-none">
       <Canvas 
         camera={{ position: [0, 0, 6], fov: 85 }}
         className="transform-gpu"
